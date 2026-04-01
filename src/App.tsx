@@ -378,14 +378,22 @@ const LoginForm = ({ onLogin, onCancel }: {
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({ username, password })
       });
-      const data = await res.json();
+      
       if (res.ok) {
+        const data = await res.json();
         onLogin(data.user);
       } else {
-        setError(data.message || 'Login gagal.');
+        const errorText = await res.text();
+        console.error('Login failed:', res.status, errorText);
+        try {
+          const errorData = JSON.parse(errorText);
+          setError(errorData.message || 'Login gagal.');
+        } catch {
+          setError(`Server error (${res.status}).`);
+        }
       }
     } catch (err) {
-      console.error('Login error:', err);
+      console.error('Network error during login:', err);
       setError('Terjadi kesalahan koneksi. Periksa MONGODB_URI di Secrets.');
     } finally {
       setLoading(false);

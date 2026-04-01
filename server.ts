@@ -57,6 +57,23 @@ app.use(cors({
   credentials: true
 }));
 
+app.get("/api/health", (req, res) => {
+  const dbStatus = mongoose.connection.readyState;
+  const dbStates = ["disconnected", "connected", "connecting", "disconnecting"];
+  
+  let error = null;
+  if (process.env.MONGODB_URI && (process.env.MONGODB_URI.includes("<") || process.env.MONGODB_URI.includes(">"))) {
+    error = "MONGODB_URI contains '<' or '>'. Please remove these brackets from your connection string in Secrets.";
+  }
+
+  res.json({ 
+    status: "ok", 
+    db: dbStates[dbStatus] || "unknown",
+    error: error,
+    env: process.env.NODE_ENV
+  });
+});
+
 const authenticate = async (req: any, res: any, next: any) => {
   const token = req.cookies.token;
   if (!token) return res.status(401).json({ message: "Unauthorized" });
@@ -188,9 +205,18 @@ app.delete("/api/reservations/:id", authenticate, async (req, res) => {
 // --- Server Start ---
 
 export const startServer = async () => {
+  // Start listening immediately so the frontend can at least connect to the server
+  if (process.env.NODE_ENV !== "production" || !process.env.VERCEL) {
+    app.listen(PORT, "0.0.0.0", () => {
+      console.log(`Server running on http://localhost:${PORT}`);
+    });
+  }
+
   try {
     if (!process.env.MONGODB_URI) {
       console.warn("WARNING: MONGODB_URI is not set. Using local fallback.");
+    } else if (process.env.MONGODB_URI.includes("<") || process.env.MONGODB_URI.includes(">")) {
+      console.error("ERROR: MONGODB_URI contains '<' or '>'. Please remove these brackets from your connection string in Secrets.");
     }
     
     console.log("Attempting to connect to MongoDB...");
@@ -226,25 +252,20 @@ export const startServer = async () => {
     console.error("MongoDB Connection Error:", err);
     // Even if DB fails, we still want to serve the frontend (Vite)
     if (process.env.NODE_ENV !== "production") {
-      const vite = await createViteServer({
-        server: { middlewareMode: true },
-        appType: "spa",
-      });
-      app.use(vite.middlewares);
+      try {
+        const vite = await createViteServer({
+          server: { middlewareMode: true },
+          appType: "spa",
+        });
+        app.use(vite.middlewares);
+      } catch (viteErr) {
+        console.error("Vite Middleware Error:", viteErr);
+      }
     }
-  }
-
-  // Only listen if not running as a serverless function
-  if (process.env.NODE_ENV !== "production" || !process.env.VERCEL) {
-    app.listen(PORT, "0.0.0.0", () => {
-      console.log(`Server running on http://localhost:${PORT}`);
-    });
   }
 };
 
-// Only call startServer if this file is run directly
-if (import.meta.url === `file://${process.argv[1]}` || process.env.NODE_ENV === "development") {
-  startServer();
-}
+// Call startServer
+startServer();
 
 export default app;
