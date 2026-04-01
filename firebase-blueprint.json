@@ -1,0 +1,68 @@
+{
+  "entities": {
+    "MenuItem": {
+      "title": "Menu Item",
+      "description": "A food or drink item on the Klopp Cafe menu.",
+      "type": "object",
+      "properties": {
+        "name": {
+          "type": "string",
+          "description": "The name of the menu item."
+        },
+        "description": {
+          "type": "string",
+          "description": "A detailed description of the item."
+        },
+        "price": {
+          "type": "number",
+          "description": "The price of the item."
+        },
+        "imageUrl": {
+          "type": "string",
+          "format": "url",
+          "description": "The URL of the item image."
+        },
+        "category": {
+          "type": "string",
+          "description": "The category (e.g., Coffee, Pastry, Breakfast)."
+        },
+        "stock": {
+          "type": "integer",
+          "description": "The number of items available."
+        },
+        "createdAt": {
+          "type": "string",
+          "format": "date-time",
+          "description": "The date and time the item was added."
+        }
+      },
+      "required": ["name", "price", "category"]
+    },
+    "Reservation": {
+      "title": "Reservation",
+      "description": "A table reservation at Klopp Cafe.",
+      "type": "object",
+      "properties": {
+        "name": { "type": "string", "description": "Name of the person making the reservation." },
+        "email": { "type": "string", "format": "email", "description": "Email of the person." },
+        "phone": { "type": "string", "description": "Phone number." },
+        "date": { "type": "string", "format": "date", "description": "Reservation date." },
+        "time": { "type": "string", "format": "time", "description": "Reservation time." },
+        "guests": { "type": "integer", "description": "Number of guests." },
+        "status": { "type": "string", "enum": ["pending", "confirmed", "cancelled"], "description": "Status of the reservation." },
+        "createdAt": { "type": "string", "format": "date-time", "description": "When the reservation was made." }
+      },
+      "required": ["name", "phone", "date", "time", "guests"]
+    }
+  },
+  "firestore": {
+    "/products": {
+      "schema": "MenuItem",
+      "description": "A collection of menu items (stored in 'products' collection for compatibility)."
+    },
+    "/reservations": {
+      "schema": "Reservation",
+      "description": "A collection of customer reservations."
+    }
+  }
+}

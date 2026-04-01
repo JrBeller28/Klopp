@@ -1,0 +1,5 @@
+{
+  "name": "Klopp #TempatBercerita - Your Story Starts Here",
+  "description": "Welcome to Klopp #TempatBercerita. A warm and inviting space in Tangerang to share stories over premium coffee and handcrafted treats.",
+  "requestFramePermissions": ["geolocation"]
+}
