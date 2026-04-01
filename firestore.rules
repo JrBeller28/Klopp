@@ -39,8 +39,26 @@ service cloud.firestore {
 
     function isAdmin() {
       return isAuthenticated() &&
-        (get(/databases/$(database)/documents/users/$(request.auth.uid)).data.role == 'admin' ||
-          (request.auth.token.email == "adjiprasetyo4@gmail.com" && request.auth.token.email_verified == true));
+        (
+          (exists(/databases/$(database)/documents/users/$(request.auth.uid)) && get(/databases/$(database)/documents/users/$(request.auth.uid)).data.role == 'admin') ||
+          (request.auth.token.email == "muhammad.adjiprasetyo28@gmail.com" && request.auth.token.email_verified == true)
+        );
+    }
+
+    function isValidEmail(email) {
+      return email is string &&
+        email.matches("^[a-zA-Z0-9._%+-]+@[a-zA-Z0-9.-]+\\.[a-zA-Z]{2,}$");
+    }
+
+    function isValidUrl(url) {
+      return url is string &&
+        (url.matches("^https://.*") || url.matches("^http://.*") || url.matches("^/.*") || url.matches("^[a-zA-Z0-9_-]+\\.(png|jpg|jpeg|gif|svg|webp)$"));
+    }
+
+    function isRecent(time) {
+      return time is timestamp &&
+        time > request.time - duration.value(5, 'm') &&
+        time < request.time + duration.value(5, 'm');
     }
 
     function isValidProduct(data) {
@@ -49,20 +67,21 @@ service cloud.firestore {
              data.price is number && data.price >= 0 &&
              data.category is string && data.category.size() > 0 && data.category.size() < 50 &&
              (!('description' in data) || (data.description is string && data.description.size() < 1000)) &&
-             (!('imageUrl' in data) || (data.imageUrl is string && data.imageUrl.size() < 500)) &&
-             (!('stock' in data) || (data.stock is number && data.stock >= 0));
+             (!('imageUrl' in data) || (data.imageUrl is string && data.imageUrl.size() < 500 && isValidUrl(data.imageUrl))) &&
+             (!('stock' in data) || (data.stock is number && data.stock >= 0)) &&
+             (!('createdAt' in data) || (data.createdAt is timestamp));
     }
 
     function isValidReservation(data) {
       return data.keys().hasAll(['name', 'phone', 'date', 'time', 'guests', 'status', 'createdAt']) &&
              data.name is string && data.name.size() > 0 && data.name.size() < 100 &&
              data.phone is string && data.phone.size() > 0 && data.phone.size() < 20 &&
-             data.date is string &&
-             data.time is string &&
-             data.guests is number && data.guests > 0 &&
+             data.date is string && data.date.matches("^\\d{4}-\\d{2}-\\d{2}$") &&
+             data.time is string && data.time.matches("^\\d{2}:\\d{2}$") &&
+             data.guests is number && data.guests > 0 && data.guests < 50 &&
              data.status in ['pending', 'confirmed', 'cancelled'] &&
              data.createdAt is timestamp &&
-             (!('email' in data) || (data.email is string && data.email.size() < 100));
+             (!('email' in data) || (data.email is string && data.email.size() < 100 && isValidEmail(data.email)));
     }
 
     // ===============================================================
@@ -70,14 +89,14 @@ service cloud.firestore {
     // ===============================================================
 
     match /products/{productId} {
-      allow read: if true; // Publicly readable
+      allow read: if true; // Publicly readable for the menu
       allow create: if isAdmin() && isValidProduct(request.resource.data);
       allow update: if isAdmin() && isValidProduct(request.resource.data);
       allow delete: if isAdmin();
     }
 
     match /reservations/{reservationId} {
-      allow create: if isValidReservation(request.resource.data);
+      allow create: if isValidReservation(request.resource.data) && isRecent(request.resource.data.createdAt);
       allow read, update, delete: if isAdmin();
     }
 

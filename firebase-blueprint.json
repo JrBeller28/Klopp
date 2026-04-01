@@ -1,68 +1,45 @@
 {
   "entities": {
-    "MenuItem": {
-      "title": "Menu Item",
-      "description": "A food or drink item on the Klopp Cafe menu.",
+    "Product": {
+      "title": "Product",
+      "description": "Menu items for the cafe",
       "type": "object",
       "properties": {
-        "name": {
-          "type": "string",
-          "description": "The name of the menu item."
-        },
-        "description": {
-          "type": "string",
-          "description": "A detailed description of the item."
-        },
-        "price": {
-          "type": "number",
-          "description": "The price of the item."
-        },
-        "imageUrl": {
-          "type": "string",
-          "format": "url",
-          "description": "The URL of the item image."
-        },
-        "category": {
-          "type": "string",
-          "description": "The category (e.g., Coffee, Pastry, Breakfast)."
-        },
-        "stock": {
-          "type": "integer",
-          "description": "The number of items available."
-        },
-        "createdAt": {
-          "type": "string",
-          "format": "date-time",
-          "description": "The date and time the item was added."
-        }
+        "name": { "type": "string", "description": "Name of the product" },
+        "description": { "type": "string", "description": "Description of the product" },
+        "price": { "type": "number", "description": "Price in Rupiah" },
+        "imageUrl": { "type": "string", "description": "URL or path to the product image" },
+        "category": { "type": "string", "description": "Category of the product (e.g., Coffee, Snack)" },
+        "stock": { "type": "number", "description": "Available stock" },
+        "createdAt": { "type": "string", "format": "date-time", "description": "Creation timestamp" }
       },
       "required": ["name", "price", "category"]
     },
     "Reservation": {
       "title": "Reservation",
-      "description": "A table reservation at Klopp Cafe.",
+      "description": "Table reservations made by customers",
       "type": "object",
       "properties": {
-        "name": { "type": "string", "description": "Name of the person making the reservation." },
-        "email": { "type": "string", "format": "email", "description": "Email of the person." },
-        "phone": { "type": "string", "description": "Phone number." },
-        "date": { "type": "string", "format": "date", "description": "Reservation date." },
-        "time": { "type": "string", "format": "time", "description": "Reservation time." },
-        "guests": { "type": "integer", "description": "Number of guests." },
-        "status": { "type": "string", "enum": ["pending", "confirmed", "cancelled"], "description": "Status of the reservation." },
-        "createdAt": { "type": "string", "format": "date-time", "description": "When the reservation was made." }
+        "name": { "type": "string", "description": "Customer name" },
+        "email": { "type": "string", "format": "email", "description": "Customer email" },
+        "phone": { "type": "string", "description": "Customer phone number" },
+        "date": { "type": "string", "description": "Reservation date (YYYY-MM-DD)" },
+        "time": { "type": "string", "description": "Reservation time (HH:MM)" },
+        "guests": { "type": "number", "description": "Number of guests" },
+        "status": { "type": "string", "enum": ["pending", "confirmed", "cancelled"], "description": "Status of the reservation" },
+        "createdAt": { "type": "string", "format": "date-time", "description": "Creation timestamp" }
       },
-      "required": ["name", "phone", "date", "time", "guests"]
+      "required": ["name", "phone", "date", "time", "guests", "status"]
     }
   },
   "firestore": {
-    "/products": {
-      "schema": "MenuItem",
-      "description": "A collection of menu items (stored in 'products' collection for compatibility)."
+    "/products/{productId}": {
+      "schema": "Product",
+      "description": "Collection of cafe menu products"
     },
-    "/reservations": {
+    "/reservations/{reservationId}": {
       "schema": "Reservation",
-      "description": "A collection of customer reservations."
+      "description": "Collection of customer reservations"
     }
   }
 }

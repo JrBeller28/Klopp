@@ -17,11 +17,13 @@ import {
   updateDoc, 
   deleteDoc, 
   doc, 
+  setDoc,
   query, 
   orderBy, 
   handleFirestoreError, 
   OperationType,
-  User
+  User,
+  serverTimestamp
 } from './firebase';
 import { LogIn, LogOut, Plus, Trash2, Edit2, Coffee, Search, Filter, ShoppingCart, Star, Utensils, MapPin, Clock, Phone, Instagram, MessageSquare, Mail } from 'lucide-react';
 import { motion, AnimatePresence } from 'motion/react';
@@ -144,7 +146,7 @@ const ProductCard = ({ product, isAdmin, onEdit, onDelete }: {
         <h3 className="text-lg font-bold text-gray-900 mb-1 line-clamp-1">{product.name}</h3>
         <p className="text-sm text-gray-500 mb-4 line-clamp-2 h-10">{product.description || "No description provided."}</p>
         <div className="flex items-center justify-between">
-          <span className="text-xl font-black text-gray-900">${product.price.toLocaleString()}</span>
+          <span className="text-xl font-black text-gray-900">Rp {product.price.toLocaleString('id-ID')}</span>
           <button className="p-2 bg-orange-600 text-white rounded-full hover:bg-orange-700 transition-colors">
             <ShoppingCart className="w-5 h-5" />
           </button>
@@ -208,7 +210,7 @@ const ProductForm = ({ product, onSave, onCancel }: {
             </div>
             <div className="grid grid-cols-2 gap-4">
               <div>
-                <label className="block text-xs font-bold text-sky-400 uppercase tracking-widest mb-1">Price ($)</label>
+                <label className="block text-xs font-bold text-sky-400 uppercase tracking-widest mb-1">Harga (Rp)</label>
                 <input 
                   type="number" 
                   value={formData.price} 
@@ -378,23 +380,11 @@ const ReservationForm = ({ onSave, onCancel }: {
   );
 };
 
-const LoginForm = ({ onLogin, onCancel }: { 
-  onLogin: (user: any) => void, 
-  onCancel: () => void 
+const LoginForm = ({ onGoogleLogin, onCancel, isLoggingIn }: { 
+  onGoogleLogin: () => void,
+  onCancel: () => void,
+  isLoggingIn: boolean
 }) => {
-  const [username, setUsername] = useState('');
-  const [password, setPassword] = useState('');
-  const [error, setError] = useState('');
-
-  const handleSubmit = (e: React.FormEvent) => {
-    e.preventDefault();
-    if (username === 'admin' && password === 'adminklopp') {
-      onLogin({ displayName: 'Admin Klopp', email: 'admin@klopp.cafe', photoURL: 'https://ui-avatars.com/api/?name=Admin+Klopp&background=78350f&color=fff' });
-    } else {
-      setError('Username atau password salah.');
-    }
-  };
-
   return (
     <motion.div 
       initial={{ opacity: 0 }}
@@ -408,46 +398,27 @@ const LoginForm = ({ onLogin, onCancel }: {
       >
         <div className="p-8">
           <h2 className="text-2xl font-bold text-sky-950 mb-6 text-center">Sign In Admin</h2>
-          <form onSubmit={handleSubmit} className="space-y-4">
-            <div>
-              <label className="block text-xs font-bold text-sky-400 uppercase tracking-widest mb-1">Username</label>
-              <input 
-                type="text" 
-                required
-                value={username} 
-                onChange={e => setUsername(e.target.value)}
-                className="w-full px-4 py-3 bg-sky-50 border-none rounded-xl focus:ring-2 focus:ring-orange-500 transition-all outline-none"
-                placeholder="admin"
-              />
-            </div>
-            <div>
-              <label className="block text-xs font-bold text-sky-400 uppercase tracking-widest mb-1">Password</label>
-              <input 
-                type="password" 
-                required
-                value={password} 
-                onChange={e => setPassword(e.target.value)}
-                className="w-full px-4 py-3 bg-sky-50 border-none rounded-xl focus:ring-2 focus:ring-orange-500 transition-all outline-none"
-                placeholder="••••••••"
-              />
-            </div>
-            {error && <p className="text-red-500 text-xs font-bold">{error}</p>}
-            <div className="flex gap-3 mt-8">
-              <button 
-                type="submit"
-                className="flex-1 py-4 bg-orange-600 text-white font-bold rounded-2xl hover:bg-orange-700 transition-all shadow-lg shadow-orange-200"
-              >
-                Sign In
-              </button>
-              <button 
-                type="button"
-                onClick={onCancel}
-                className="px-8 py-4 bg-sky-100 text-sky-600 font-bold rounded-2xl hover:bg-sky-200 transition-all"
-              >
-                Cancel
-              </button>
-            </div>
-          </form>
+          
+          <p className="text-sm text-gray-500 mb-8 text-center">
+            Gunakan akun Google Anda untuk masuk ke dashboard admin Klopp #TempatBercerita.
+          </p>
+
+          <button 
+            onClick={onGoogleLogin}
+            disabled={isLoggingIn}
+            className="w-full mb-6 py-4 px-4 bg-white border-2 border-gray-100 rounded-2xl flex items-center justify-center gap-3 hover:bg-gray-50 hover:border-orange-200 transition-all font-bold text-gray-700 shadow-sm group"
+          >
+            <img src="https://www.gstatic.com/firebasejs/ui/2.0.0/images/auth/google.svg" alt="Google" className="w-6 h-6 group-hover:scale-110 transition-transform" />
+            {isLoggingIn ? 'Connecting...' : 'Sign In with Google'}
+          </button>
+
+          <button 
+            type="button"
+            onClick={onCancel}
+            className="w-full py-4 bg-sky-50 text-sky-600 font-bold rounded-2xl hover:bg-sky-100 transition-all"
+          >
+            Cancel
+          </button>
         </div>
       </motion.div>
     </motion.div>
@@ -458,8 +429,7 @@ const LoginForm = ({ onLogin, onCancel }: {
 
 export default function App() {
   const [firebaseUser, setFirebaseUser] = useState<User | null>(null);
-  const [customUser, setCustomUser] = useState<any>(null);
-  const user = firebaseUser || customUser;
+  const user = firebaseUser;
   
   const [products, setProducts] = useState<Product[]>([]);
   const [reservations, setReservations] = useState<Reservation[]>([]);
@@ -475,7 +445,8 @@ export default function App() {
   const [adminTab, setAdminTab] = useState<'products' | 'reservations'>('products');
 
   const isAdmin = useMemo(() => {
-    return user?.email === "adjiprasetyo4@gmail.com" || user?.email === "admin@klopp.cafe";
+    // Only Google Login with the owner email can access the Admin Dashboard UI
+    return user?.email === "muhammad.adjiprasetyo28@gmail.com";
   }, [user]);
 
   useEffect(() => {
@@ -487,22 +458,34 @@ export default function App() {
   }, [isAdmin]);
 
   useEffect(() => {
-    const unsubscribe = onAuthStateChanged(auth, (u) => {
+    const unsubscribe = onAuthStateChanged(auth, async (u) => {
       setFirebaseUser(u);
+      if (u) {
+        // Sync user document to Firestore
+        try {
+          const userRef = doc(db, 'users', u.uid);
+          await setDoc(userRef, {
+            displayName: u.displayName,
+            email: u.email,
+            photoURL: u.photoURL,
+            lastLogin: serverTimestamp(),
+            // If it's the owner email, ensure they have admin role in their doc too
+            ...(u.email === "muhammad.adjiprasetyo28@gmail.com" ? { role: 'admin' } : {})
+          }, { merge: true });
+        } catch (error) {
+          console.error("Error syncing user document:", error);
+        }
+      }
       setIsAuthReady(true);
     });
     return () => unsubscribe();
   }, []);
 
   const handleLogout = async () => {
-    if (customUser) {
-      setCustomUser(null);
-    } else {
-      try {
-        await signOut(auth);
-      } catch (error) {
-        console.error("Logout failed:", error);
-      }
+    try {
+      await signOut(auth);
+    } catch (error) {
+      console.error("Logout failed:", error);
     }
     setView('landing');
   };
@@ -544,6 +527,8 @@ export default function App() {
   }, [isAuthReady, isAdmin]);
 
   const [isLoggingIn, setIsLoggingIn] = useState(false);
+  const [isSeeding, setIsSeeding] = useState(false);
+  const [statusMessage, setStatusMessage] = useState<{ type: 'success' | 'error', text: string } | null>(null);
 
   const handleLogin = async () => {
     if (isLoggingIn) return;
@@ -555,7 +540,7 @@ export default function App() {
         console.warn("Login popup was closed or a new request was made.");
       } else {
         console.error("Login failed:", error);
-        alert("Login failed. Please try again.");
+        setStatusMessage({ type: 'error', text: "Login gagal. Silakan coba lagi." });
       }
     } finally {
       setIsLoggingIn(false);
@@ -570,27 +555,44 @@ export default function App() {
       } else {
         await addDoc(collection(db, 'products'), {
           ...data,
-          createdAt: new Date()
+          createdAt: serverTimestamp()
         });
       }
       setShowForm(false);
       setEditingProduct(undefined);
+      setStatusMessage({ type: 'success', text: 'Produk berhasil disimpan!' });
+      setTimeout(() => setStatusMessage(null), 3000);
     } catch (error) {
-      handleFirestoreError(error, editingProduct ? OperationType.UPDATE : OperationType.CREATE, 'products');
+      const message = handleFirestoreError(error, editingProduct ? OperationType.UPDATE : OperationType.CREATE, 'products');
+      setStatusMessage({ type: 'error', text: message });
     }
   };
 
   const handleDeleteProduct = async (id: string) => {
-    if (!window.confirm("Are you sure you want to delete this product?")) return;
     try {
       await deleteDoc(doc(db, 'products', id));
+      setStatusMessage({ type: 'success', text: 'Produk berhasil dihapus!' });
+      setTimeout(() => setStatusMessage(null), 3000);
     } catch (error) {
-      handleFirestoreError(error, OperationType.DELETE, `products/${id}`);
+      const message = handleFirestoreError(error, OperationType.DELETE, `products/${id}`);
+      setStatusMessage({ type: 'error', text: message });
     }
   };
 
   const handleSeedMenu = async () => {
-    if (!window.confirm("Ini akan menambahkan beberapa menu contoh menggunakan foto dari folder Menu. Lanjutkan?")) return;
+    if (isSeeding) return;
+    
+    // Check if authenticated with Firebase (Google Login)
+    if (!auth.currentUser) {
+      setStatusMessage({ 
+        type: 'error', 
+        text: 'Anda harus login menggunakan Google untuk melakukan aksi ini (akses database).' 
+      });
+      return;
+    }
+
+    setIsSeeding(true);
+    setStatusMessage({ type: 'success', text: 'Sedang menambahkan menu...' });
     
     const initialProducts = [
       { name: 'Kopi Susu Klopp', price: 18000, category: 'Coffee', description: 'Kopi susu gula aren khas Klopp dengan rasa yang creamy dan pas.', imageUrl: 'm.png' },
@@ -603,12 +605,16 @@ export default function App() {
       for (const p of initialProducts) {
         await addDoc(collection(db, 'products'), {
           ...p,
-          createdAt: new Date()
+          createdAt: serverTimestamp()
         });
       }
-      alert('Menu berhasil ditambahkan!');
+      setStatusMessage({ type: 'success', text: 'Menu berhasil ditambahkan!' });
+      setTimeout(() => setStatusMessage(null), 3000);
     } catch (error) {
-      handleFirestoreError(error, OperationType.WRITE, 'products');
+      const message = handleFirestoreError(error, OperationType.WRITE, 'products');
+      setStatusMessage({ type: 'error', text: message });
+    } finally {
+      setIsSeeding(false);
     }
   };
 
@@ -617,29 +623,36 @@ export default function App() {
       await addDoc(collection(db, 'reservations'), {
         ...data,
         status: 'pending',
-        createdAt: new Date()
+        createdAt: serverTimestamp()
       });
-      alert("Reservasi berhasil dikirim! Kami akan menghubungi Anda segera.");
+      setStatusMessage({ type: 'success', text: "Reservasi berhasil dikirim! Kami akan menghubungi Anda segera." });
+      setTimeout(() => setStatusMessage(null), 5000);
       setShowReservationForm(false);
     } catch (error) {
-      handleFirestoreError(error, OperationType.CREATE, 'reservations');
+      const message = handleFirestoreError(error, OperationType.CREATE, 'reservations');
+      setStatusMessage({ type: 'error', text: message });
     }
   };
 
   const handleUpdateReservationStatus = async (id: string, status: string) => {
     try {
       await updateDoc(doc(db, 'reservations', id), { status });
+      setStatusMessage({ type: 'success', text: `Status reservasi diperbarui ke ${status}!` });
+      setTimeout(() => setStatusMessage(null), 3000);
     } catch (error) {
-      handleFirestoreError(error, OperationType.UPDATE, `reservations/${id}`);
+      const message = handleFirestoreError(error, OperationType.UPDATE, `reservations/${id}`);
+      setStatusMessage({ type: 'error', text: message });
     }
   };
 
   const handleDeleteReservation = async (id: string) => {
-    if (!window.confirm("Hapus data reservasi ini?")) return;
     try {
       await deleteDoc(doc(db, 'reservations', id));
+      setStatusMessage({ type: 'success', text: 'Reservasi berhasil dihapus!' });
+      setTimeout(() => setStatusMessage(null), 3000);
     } catch (error) {
-      handleFirestoreError(error, OperationType.DELETE, `reservations/${id}`);
+      const message = handleFirestoreError(error, OperationType.DELETE, `reservations/${id}`);
+      setStatusMessage({ type: 'error', text: message });
     }
   };
 
@@ -660,7 +673,28 @@ export default function App() {
   return (
     <ErrorBoundary>
       <div className="min-h-screen bg-[#FAF9F6] text-gray-900 font-sans selection:bg-orange-100">
-        {/* Navigation */}
+        {/* Status Message Overlay */}
+      {statusMessage && (
+        <div className="fixed top-24 left-1/2 -translate-x-1/2 z-[100] w-full max-w-md px-4">
+          <motion.div 
+            initial={{ y: -20, opacity: 0 }}
+            animate={{ y: 0, opacity: 1 }}
+            className={`p-4 rounded-2xl shadow-xl border flex items-center gap-3 ${
+              statusMessage.type === 'success' 
+                ? 'bg-green-50 border-green-100 text-green-800' 
+                : 'bg-red-50 border-red-100 text-red-800'
+            }`}
+          >
+            <div className={`w-2 h-2 rounded-full ${statusMessage.type === 'success' ? 'bg-green-500' : 'bg-red-500'}`} />
+            <p className="text-sm font-bold">{statusMessage.text}</p>
+            <button onClick={() => setStatusMessage(null)} className="ml-auto text-current opacity-50 hover:opacity-100">
+              <LogOut className="w-4 h-4 rotate-45" />
+            </button>
+          </motion.div>
+        </div>
+      )}
+
+      {/* Navigation */}
         <nav className="sticky top-0 z-40 bg-white/80 backdrop-blur-md border-b border-sky-100">
           <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
             <div className="flex justify-between items-center h-20">
@@ -1126,10 +1160,11 @@ export default function App() {
                   <div className="flex flex-col sm:flex-row gap-4 w-full md:w-auto">
                     <button 
                       onClick={handleSeedMenu}
-                      className="flex items-center justify-center gap-2 px-6 py-4 bg-sky-100 text-sky-700 font-bold rounded-2xl hover:bg-sky-200 transition-all"
+                      disabled={isSeeding}
+                      className={`flex items-center justify-center gap-2 px-6 py-4 font-bold rounded-2xl transition-all ${isSeeding ? 'bg-gray-100 text-gray-400' : 'bg-sky-100 text-sky-700 hover:bg-sky-200'}`}
                     >
-                      <Plus className="w-5 h-5" />
-                      Seed Menu Contoh
+                      <Plus className={`w-5 h-5 ${isSeeding ? 'animate-spin' : ''}`} />
+                      {isSeeding ? 'Sedang Menambahkan...' : 'Seed Menu Contoh'}
                     </button>
                     <div className="relative">
                       <Search className="absolute left-4 top-1/2 -translate-y-1/2 text-sky-400 w-5 h-5" />
@@ -1266,10 +1301,8 @@ export default function App() {
           )}
           {showLoginForm && (
             <LoginForm 
-              onLogin={(u) => {
-                setCustomUser(u);
-                setShowLoginForm(false);
-              }}
+              onGoogleLogin={handleLogin}
+              isLoggingIn={isLoggingIn}
               onCancel={() => setShowLoginForm(false)}
             />
           )}

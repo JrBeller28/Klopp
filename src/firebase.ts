@@ -1,6 +1,6 @@
 import { initializeApp } from 'firebase/app';
 import { getAuth, GoogleAuthProvider, signInWithPopup, signOut, onAuthStateChanged, User } from 'firebase/auth';
-import { getFirestore, collection, doc, getDoc, getDocs, setDoc, addDoc, updateDoc, deleteDoc, onSnapshot, query, orderBy, limit, getDocFromServer } from 'firebase/firestore';
+import { getFirestore, collection, doc, getDoc, getDocs, setDoc, addDoc, updateDoc, deleteDoc, onSnapshot, query, orderBy, limit, getDocFromServer, serverTimestamp } from 'firebase/firestore';
 
 // Import the Firebase configuration
 import firebaseConfig from '../firebase-applet-config.json';
@@ -59,7 +59,13 @@ export function handleFirestoreError(error: unknown, operationType: OperationTyp
     path
   }
   console.error('Firestore Error: ', JSON.stringify(errInfo));
-  throw new Error(JSON.stringify(errInfo));
+  
+  // Return the error message instead of just throwing, so the caller can decide
+  const message = error instanceof Error ? error.message : String(error);
+  if (message.includes('insufficient permissions')) {
+    return "Anda tidak memiliki izin untuk melakukan aksi ini. Pastikan Anda login sebagai Admin.";
+  }
+  return message;
 }
 
 // Validate connection to Firestore
@@ -90,6 +96,7 @@ export {
   onSnapshot,
   query,
   orderBy,
-  limit
+  limit,
+  serverTimestamp
 };
 export type { User };
