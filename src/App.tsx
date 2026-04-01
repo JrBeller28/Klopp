@@ -385,7 +385,8 @@ const LoginForm = ({ onLogin, onCancel }: {
         setError(data.message || 'Login gagal.');
       }
     } catch (err) {
-      setError('Terjadi kesalahan koneksi.');
+      console.error('Login error:', err);
+      setError('Terjadi kesalahan koneksi. Periksa MONGODB_URI di Secrets.');
     } finally {
       setLoading(false);
     }

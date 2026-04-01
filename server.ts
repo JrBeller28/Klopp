@@ -187,12 +187,7 @@ app.delete("/api/reservations/:id", authenticate, async (req, res) => {
 
 // --- Server Start ---
 
-async function startServer() {
-  // Start listening immediately so the frontend can at least connect to the server
-  const server = app.listen(PORT, "0.0.0.0", () => {
-    console.log(`Server running on http://localhost:${PORT}`);
-  });
-
+export const startServer = async () => {
   try {
     if (!process.env.MONGODB_URI) {
       console.warn("WARNING: MONGODB_URI is not set. Using local fallback.");
@@ -238,6 +233,18 @@ async function startServer() {
       app.use(vite.middlewares);
     }
   }
+
+  // Only listen if not running as a serverless function
+  if (process.env.NODE_ENV !== "production" || !process.env.VERCEL) {
+    app.listen(PORT, "0.0.0.0", () => {
+      console.log(`Server running on http://localhost:${PORT}`);
+    });
+  }
+};
+
+// Only call startServer if this file is run directly
+if (import.meta.url === `file://${process.argv[1]}` || process.env.NODE_ENV === "development") {
+  startServer();
 }
 
-startServer();
+export default app;
