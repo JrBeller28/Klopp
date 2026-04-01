@@ -369,15 +369,23 @@ const LoginForm = ({ onLogin, onCancel }: {
   const [loading, setLoading] = useState(false);
 
   const [apiStatus, setApiStatus] = useState<'checking' | 'ok' | 'error'>('checking');
+  const [apiError, setApiError] = useState<string | null>(null);
 
   useEffect(() => {
     const checkHealth = async () => {
       try {
         const res = await fetch('/api/health');
-        if (res.ok) setApiStatus('ok');
-        else setApiStatus('error');
-      } catch {
+        if (res.ok) {
+          const data = await res.json();
+          if (data.error) setApiError(data.error);
+          setApiStatus('ok');
+        } else {
+          setApiStatus('error');
+          setApiError(`Server returned status ${res.status}`);
+        }
+      } catch (err) {
         setApiStatus('error');
+        setApiError('Gagal menghubungi server. Pastikan backend berjalan.');
       }
     };
     checkHealth();
@@ -451,12 +459,12 @@ const LoginForm = ({ onLogin, onCancel }: {
                 placeholder="••••••••"
               />
             </div>
-            {apiStatus === 'error' && (
-              <p className="text-red-500 text-xs font-bold bg-red-50 p-2 rounded text-center">
-                Server tidak merespon. Pastikan backend berjalan.
+            {(apiStatus === 'error' || apiError) && (
+              <p className="text-red-500 text-xs font-bold bg-red-50 p-2 rounded text-center border border-red-100">
+                {apiError || "Server tidak merespon. Pastikan backend berjalan."}
               </p>
             )}
-            {error && <p className="text-red-500 text-xs font-bold bg-red-50 p-2 rounded text-center">{error}</p>}
+            {error && <p className="text-red-500 text-xs font-bold bg-red-50 p-2 rounded text-center border border-red-100">{error}</p>}
             <div className="flex gap-3 mt-8">
               <button 
                 type="submit"

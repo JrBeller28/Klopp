@@ -10,10 +10,52 @@ import bcrypt from "bcryptjs";
 
 dotenv.config();
 
+console.log("Server starting with NODE_ENV:", process.env.NODE_ENV);
+
 mongoose.set('bufferCommands', false);
 
 const app = express();
 const PORT = 3000;
+
+// --- Middleware & Basic Routes ---
+
+app.use(cors({
+  origin: true,
+  credentials: true
+}));
+
+// Health check - Move to top and make extremely robust
+app.get("/api/health", (req, res) => {
+  console.log("Health check request received");
+  try {
+    const dbStatus = mongoose.connection.readyState;
+    const dbStates = ["disconnected", "connected", "connecting", "disconnecting"];
+    
+    let uriError = null;
+    const uri = process.env.MONGODB_URI;
+    if (!uri) {
+      uriError = "MONGODB_URI is missing in Secrets.";
+    } else if (uri.includes("<") || uri.includes(">")) {
+      uriError = "MONGODB_URI contains '<' or '>'. Please remove these brackets from your connection string in Secrets.";
+    }
+
+    res.json({ 
+      status: "ok", 
+      db: dbStates[dbStatus] || "unknown",
+      dbCode: dbStatus,
+      error: uriError,
+      env: process.env.NODE_ENV || "development",
+      time: new Date().toISOString()
+    });
+  } catch (err) {
+    console.error("Health check internal error:", err);
+    res.status(500).json({ status: "error", message: String(err) });
+  }
+});
+
+app.use(express.json());
+app.use(cookieParser());
+
 const MONGODB_URI = process.env.MONGODB_URI || "mongodb://localhost:27017/klopp";
 const JWT_SECRET = process.env.JWT_SECRET || "klopp-secret-key";
 
@@ -44,35 +86,9 @@ const reservationSchema = new mongoose.Schema({
   createdAt: { type: Date, default: Date.now },
 });
 
-const User = mongoose.model("User", userSchema);
-const Product = mongoose.model("Product", productSchema);
-const Reservation = mongoose.model("Reservation", reservationSchema);
-
-// --- Middleware ---
-
-app.use(express.json());
-app.use(cookieParser());
-app.use(cors({
-  origin: true,
-  credentials: true
-}));
-
-app.get("/api/health", (req, res) => {
-  const dbStatus = mongoose.connection.readyState;
-  const dbStates = ["disconnected", "connected", "connecting", "disconnecting"];
-  
-  let error = null;
-  if (process.env.MONGODB_URI && (process.env.MONGODB_URI.includes("<") || process.env.MONGODB_URI.includes(">"))) {
-    error = "MONGODB_URI contains '<' or '>'. Please remove these brackets from your connection string in Secrets.";
-  }
-
-  res.json({ 
-    status: "ok", 
-    db: dbStates[dbStatus] || "unknown",
-    error: error,
-    env: process.env.NODE_ENV
-  });
-});
+const User = mongoose.models.User || mongoose.model("User", userSchema);
+const Product = mongoose.models.Product || mongoose.model("Product", productSchema);
+const Reservation = mongoose.models.Reservation || mongoose.model("Reservation", reservationSchema);
 
 const authenticate = async (req: any, res: any, next: any) => {
   const token = req.cookies.token;
