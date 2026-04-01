@@ -23,7 +23,7 @@ import {
   OperationType,
   User
 } from './firebase';
-import { LogIn, LogOut, Plus, Trash2, Edit2, Coffee, Search, Filter, ShoppingCart, Star, Utensils, MapPin, Clock, Phone, Instagram, MessageSquare } from 'lucide-react';
+import { LogIn, LogOut, Plus, Trash2, Edit2, Coffee, Search, Filter, ShoppingCart, Star, Utensils, MapPin, Clock, Phone, Instagram, MessageSquare, Mail } from 'lucide-react';
 import { motion, AnimatePresence } from 'motion/react';
 
 // --- Types ---
@@ -95,6 +95,19 @@ class ErrorBoundary extends Component<ErrorBoundaryProps, ErrorBoundaryState> {
 
 // --- Components ---
 
+const Logo = ({ className = "", light = false }: { className?: string, light?: boolean }) => (
+  <div className={`flex flex-col items-center leading-none ${className}`}>
+    <div className="relative">
+      <span className={`text-3xl font-black tracking-tighter ${light ? 'text-white' : 'text-orange-600'} drop-shadow-[2px_2px_0_rgba(255,255,255,1)] uppercase italic`}>
+        KLOPP
+      </span>
+    </div>
+    <span className={`text-[10px] font-bold tracking-[0.2em] ${light ? 'text-white/90' : 'text-sky-900'} uppercase -mt-1`}>
+      #TempatBercerita
+    </span>
+  </div>
+);
+
 const ProductCard = ({ product, isAdmin, onEdit, onDelete }: { 
   product: Product, 
   isAdmin: boolean, 
@@ -112,7 +125,7 @@ const ProductCard = ({ product, isAdmin, onEdit, onDelete }: {
     >
       <div className="aspect-square overflow-hidden bg-gray-50">
         <img 
-          src={product.imageUrl || `https://picsum.photos/seed/${product.name}/400/400`} 
+          src={product.imageUrl ? (product.imageUrl.startsWith('http') ? product.imageUrl : `/Menu/${product.imageUrl}`) : `https://picsum.photos/seed/${product.name}/400/400`} 
           alt={product.name}
           className="w-full h-full object-cover group-hover:scale-105 transition-transform duration-500"
           referrerPolicy="no-referrer"
@@ -120,7 +133,7 @@ const ProductCard = ({ product, isAdmin, onEdit, onDelete }: {
       </div>
       <div className="p-5">
         <div className="flex justify-between items-start mb-2">
-          <span className="text-xs font-semibold uppercase tracking-wider text-amber-700 bg-amber-50 px-2 py-1 rounded">
+          <span className="text-xs font-semibold uppercase tracking-wider text-orange-700 bg-orange-50 px-2 py-1 rounded">
             {product.category}
           </span>
           <div className="flex items-center text-yellow-400">
@@ -132,7 +145,7 @@ const ProductCard = ({ product, isAdmin, onEdit, onDelete }: {
         <p className="text-sm text-gray-500 mb-4 line-clamp-2 h-10">{product.description || "No description provided."}</p>
         <div className="flex items-center justify-between">
           <span className="text-xl font-black text-gray-900">${product.price.toLocaleString()}</span>
-          <button className="p-2 bg-amber-900 text-white rounded-full hover:bg-amber-700 transition-colors">
+          <button className="p-2 bg-orange-600 text-white rounded-full hover:bg-orange-700 transition-colors">
             <ShoppingCart className="w-5 h-5" />
           </button>
         </div>
@@ -179,71 +192,71 @@ const ProductForm = ({ product, onSave, onCancel }: {
         className="bg-white rounded-3xl shadow-2xl max-w-lg w-full overflow-hidden"
       >
         <div className="p-8">
-          <h2 className="text-2xl font-bold text-stone-900 mb-6">
+          <h2 className="text-2xl font-bold text-sky-950 mb-6">
             {product ? 'Edit Menu Item' : 'Add New Menu Item'}
           </h2>
           <div className="space-y-4">
             <div>
-              <label className="block text-xs font-bold text-stone-400 uppercase tracking-widest mb-1">Item Name</label>
+              <label className="block text-xs font-bold text-sky-400 uppercase tracking-widest mb-1">Item Name</label>
               <input 
                 type="text" 
                 value={formData.name} 
                 onChange={e => setFormData({ ...formData, name: e.target.value })}
-                className="w-full px-4 py-3 bg-stone-50 border-none rounded-xl focus:ring-2 focus:ring-amber-500 transition-all"
+                className="w-full px-4 py-3 bg-sky-50 border-none rounded-xl focus:ring-2 focus:ring-orange-500 transition-all"
                 placeholder="e.g. Double Espresso"
               />
             </div>
             <div className="grid grid-cols-2 gap-4">
               <div>
-                <label className="block text-xs font-bold text-stone-400 uppercase tracking-widest mb-1">Price ($)</label>
+                <label className="block text-xs font-bold text-sky-400 uppercase tracking-widest mb-1">Price ($)</label>
                 <input 
                   type="number" 
                   value={formData.price} 
                   onChange={e => setFormData({ ...formData, price: Number(e.target.value) })}
-                  className="w-full px-4 py-3 bg-stone-50 border-none rounded-xl focus:ring-2 focus:ring-amber-500 transition-all"
+                  className="w-full px-4 py-3 bg-sky-50 border-none rounded-xl focus:ring-2 focus:ring-orange-500 transition-all"
                 />
               </div>
               <div>
-                <label className="block text-xs font-bold text-stone-400 uppercase tracking-widest mb-1">Category</label>
+                <label className="block text-xs font-bold text-sky-400 uppercase tracking-widest mb-1">Category</label>
                 <input 
                   type="text" 
                   value={formData.category} 
                   onChange={e => setFormData({ ...formData, category: e.target.value })}
-                  className="w-full px-4 py-3 bg-stone-50 border-none rounded-xl focus:ring-2 focus:ring-amber-500 transition-all"
+                  className="w-full px-4 py-3 bg-sky-50 border-none rounded-xl focus:ring-2 focus:ring-orange-500 transition-all"
                   placeholder="e.g. Coffee"
                 />
               </div>
             </div>
             <div>
-              <label className="block text-xs font-bold text-stone-400 uppercase tracking-widest mb-1">Description</label>
+              <label className="block text-xs font-bold text-sky-400 uppercase tracking-widest mb-1">Description</label>
               <textarea 
                 value={formData.description} 
                 onChange={e => setFormData({ ...formData, description: e.target.value })}
-                className="w-full px-4 py-3 bg-stone-50 border-none rounded-xl focus:ring-2 focus:ring-amber-500 transition-all h-24 resize-none"
+                className="w-full px-4 py-3 bg-sky-50 border-none rounded-xl focus:ring-2 focus:ring-orange-500 transition-all h-24 resize-none"
                 placeholder="Tell us about the dish..."
               />
             </div>
             <div>
-              <label className="block text-xs font-bold text-stone-400 uppercase tracking-widest mb-1">Image URL</label>
+              <label className="block text-xs font-bold text-sky-400 uppercase tracking-widest mb-1">Image URL or Filename (in /Menu folder)</label>
               <input 
                 type="text" 
                 value={formData.imageUrl} 
                 onChange={e => setFormData({ ...formData, imageUrl: e.target.value })}
-                className="w-full px-4 py-3 bg-stone-50 border-none rounded-xl focus:ring-2 focus:ring-amber-500 transition-all"
-                placeholder="https://example.com/item.jpg"
+                className="w-full px-4 py-3 bg-sky-50 border-none rounded-xl focus:ring-2 focus:ring-orange-500 transition-all"
+                placeholder="e.g. kopi-susu.jpg or https://example.com/item.jpg"
               />
             </div>
           </div>
           <div className="flex gap-3 mt-8">
             <button 
               onClick={() => onSave(formData)}
-              className="flex-1 py-4 bg-amber-900 text-white font-bold rounded-2xl hover:bg-amber-800 transition-all shadow-lg shadow-amber-200"
+              className="flex-1 py-4 bg-orange-600 text-white font-bold rounded-2xl hover:bg-orange-700 transition-all shadow-lg shadow-orange-200"
             >
               {product ? 'Update Item' : 'Create Item'}
             </button>
             <button 
               onClick={onCancel}
-              className="px-8 py-4 bg-stone-100 text-stone-600 font-bold rounded-2xl hover:bg-stone-200 transition-all"
+              className="px-8 py-4 bg-sky-100 text-sky-600 font-bold rounded-2xl hover:bg-sky-200 transition-all"
             >
               Cancel
             </button>
@@ -279,82 +292,82 @@ const ReservationForm = ({ onSave, onCancel }: {
         className="bg-white rounded-3xl shadow-2xl max-w-lg w-full overflow-hidden"
       >
         <div className="p-8">
-          <h2 className="text-2xl font-bold text-stone-900 mb-6">Reservasi Meja</h2>
+          <h2 className="text-2xl font-bold text-sky-950 mb-6">Reservasi Meja</h2>
           <div className="space-y-4">
             <div>
-              <label className="block text-xs font-bold text-stone-400 uppercase tracking-widest mb-1">Nama Lengkap</label>
+              <label className="block text-xs font-bold text-sky-400 uppercase tracking-widest mb-1">Nama Lengkap</label>
               <input 
                 type="text" 
                 required
                 value={formData.name} 
                 onChange={e => setFormData({ ...formData, name: e.target.value })}
-                className="w-full px-4 py-3 bg-stone-50 border-none rounded-xl focus:ring-2 focus:ring-amber-500 transition-all"
+                className="w-full px-4 py-3 bg-sky-50 border-none rounded-xl focus:ring-2 focus:ring-orange-500 transition-all"
               />
             </div>
             <div className="grid grid-cols-2 gap-4">
               <div>
-                <label className="block text-xs font-bold text-stone-400 uppercase tracking-widest mb-1">Email</label>
+                <label className="block text-xs font-bold text-sky-400 uppercase tracking-widest mb-1">Email</label>
                 <input 
                   type="email" 
                   value={formData.email} 
                   onChange={e => setFormData({ ...formData, email: e.target.value })}
-                  className="w-full px-4 py-3 bg-stone-50 border-none rounded-xl focus:ring-2 focus:ring-amber-500 transition-all"
+                  className="w-full px-4 py-3 bg-sky-50 border-none rounded-xl focus:ring-2 focus:ring-orange-500 transition-all"
                 />
               </div>
               <div>
-                <label className="block text-xs font-bold text-stone-400 uppercase tracking-widest mb-1">No. WhatsApp</label>
+                <label className="block text-xs font-bold text-sky-400 uppercase tracking-widest mb-1">No. WhatsApp</label>
                 <input 
                   type="tel" 
                   required
                   value={formData.phone} 
                   onChange={e => setFormData({ ...formData, phone: e.target.value })}
-                  className="w-full px-4 py-3 bg-stone-50 border-none rounded-xl focus:ring-2 focus:ring-amber-500 transition-all"
+                  className="w-full px-4 py-3 bg-sky-50 border-none rounded-xl focus:ring-2 focus:ring-orange-500 transition-all"
                 />
               </div>
             </div>
             <div className="grid grid-cols-2 gap-4">
               <div>
-                <label className="block text-xs font-bold text-stone-400 uppercase tracking-widest mb-1">Tanggal</label>
+                <label className="block text-xs font-bold text-sky-400 uppercase tracking-widest mb-1">Tanggal</label>
                 <input 
                   type="date" 
                   required
                   value={formData.date} 
                   onChange={e => setFormData({ ...formData, date: e.target.value })}
-                  className="w-full px-4 py-3 bg-stone-50 border-none rounded-xl focus:ring-2 focus:ring-amber-500 transition-all"
+                  className="w-full px-4 py-3 bg-sky-50 border-none rounded-xl focus:ring-2 focus:ring-orange-500 transition-all"
                 />
               </div>
               <div>
-                <label className="block text-xs font-bold text-stone-400 uppercase tracking-widest mb-1">Waktu</label>
+                <label className="block text-xs font-bold text-sky-400 uppercase tracking-widest mb-1">Waktu</label>
                 <input 
                   type="time" 
                   required
                   value={formData.time} 
                   onChange={e => setFormData({ ...formData, time: e.target.value })}
-                  className="w-full px-4 py-3 bg-stone-50 border-none rounded-xl focus:ring-2 focus:ring-amber-500 transition-all"
+                  className="w-full px-4 py-3 bg-sky-50 border-none rounded-xl focus:ring-2 focus:ring-orange-500 transition-all"
                 />
               </div>
             </div>
             <div>
-              <label className="block text-xs font-bold text-stone-400 uppercase tracking-widest mb-1">Jumlah Tamu</label>
+              <label className="block text-xs font-bold text-sky-400 uppercase tracking-widest mb-1">Jumlah Tamu</label>
               <input 
                 type="number" 
                 min="1"
                 value={formData.guests} 
                 onChange={e => setFormData({ ...formData, guests: Number(e.target.value) })}
-                className="w-full px-4 py-3 bg-stone-50 border-none rounded-xl focus:ring-2 focus:ring-amber-500 transition-all"
+                className="w-full px-4 py-3 bg-sky-50 border-none rounded-xl focus:ring-2 focus:ring-orange-500 transition-all"
               />
             </div>
           </div>
           <div className="flex gap-3 mt-8">
             <button 
               onClick={() => onSave(formData)}
-              className="flex-1 py-4 bg-amber-900 text-white font-bold rounded-2xl hover:bg-amber-800 transition-all shadow-lg shadow-amber-200"
+              className="flex-1 py-4 bg-orange-600 text-white font-bold rounded-2xl hover:bg-orange-700 transition-all shadow-lg shadow-orange-200"
             >
               Kirim Reservasi
             </button>
             <button 
               onClick={onCancel}
-              className="px-8 py-4 bg-stone-100 text-stone-600 font-bold rounded-2xl hover:bg-stone-200 transition-all"
+              className="px-8 py-4 bg-sky-100 text-sky-600 font-bold rounded-2xl hover:bg-sky-200 transition-all"
             >
               Batal
             </button>
@@ -394,27 +407,27 @@ const LoginForm = ({ onLogin, onCancel }: {
         className="bg-white rounded-3xl shadow-2xl max-w-md w-full overflow-hidden"
       >
         <div className="p-8">
-          <h2 className="text-2xl font-bold text-stone-900 mb-6 text-center">Sign In Admin</h2>
+          <h2 className="text-2xl font-bold text-sky-950 mb-6 text-center">Sign In Admin</h2>
           <form onSubmit={handleSubmit} className="space-y-4">
             <div>
-              <label className="block text-xs font-bold text-stone-400 uppercase tracking-widest mb-1">Username</label>
+              <label className="block text-xs font-bold text-sky-400 uppercase tracking-widest mb-1">Username</label>
               <input 
                 type="text" 
                 required
                 value={username} 
                 onChange={e => setUsername(e.target.value)}
-                className="w-full px-4 py-3 bg-stone-50 border-none rounded-xl focus:ring-2 focus:ring-amber-500 transition-all outline-none"
+                className="w-full px-4 py-3 bg-sky-50 border-none rounded-xl focus:ring-2 focus:ring-orange-500 transition-all outline-none"
                 placeholder="admin"
               />
             </div>
             <div>
-              <label className="block text-xs font-bold text-stone-400 uppercase tracking-widest mb-1">Password</label>
+              <label className="block text-xs font-bold text-sky-400 uppercase tracking-widest mb-1">Password</label>
               <input 
                 type="password" 
                 required
                 value={password} 
                 onChange={e => setPassword(e.target.value)}
-                className="w-full px-4 py-3 bg-stone-50 border-none rounded-xl focus:ring-2 focus:ring-amber-500 transition-all outline-none"
+                className="w-full px-4 py-3 bg-sky-50 border-none rounded-xl focus:ring-2 focus:ring-orange-500 transition-all outline-none"
                 placeholder="••••••••"
               />
             </div>
@@ -422,14 +435,14 @@ const LoginForm = ({ onLogin, onCancel }: {
             <div className="flex gap-3 mt-8">
               <button 
                 type="submit"
-                className="flex-1 py-4 bg-amber-900 text-white font-bold rounded-2xl hover:bg-amber-800 transition-all shadow-lg shadow-amber-200"
+                className="flex-1 py-4 bg-orange-600 text-white font-bold rounded-2xl hover:bg-orange-700 transition-all shadow-lg shadow-orange-200"
               >
                 Sign In
               </button>
               <button 
                 type="button"
                 onClick={onCancel}
-                className="px-8 py-4 bg-stone-100 text-stone-600 font-bold rounded-2xl hover:bg-stone-200 transition-all"
+                className="px-8 py-4 bg-sky-100 text-sky-600 font-bold rounded-2xl hover:bg-sky-200 transition-all"
               >
                 Cancel
               </button>
@@ -576,6 +589,29 @@ export default function App() {
     }
   };
 
+  const handleSeedMenu = async () => {
+    if (!window.confirm("Ini akan menambahkan beberapa menu contoh menggunakan foto dari folder Menu. Lanjutkan?")) return;
+    
+    const initialProducts = [
+      { name: 'Kopi Susu Klopp', price: 18000, category: 'Coffee', description: 'Kopi susu gula aren khas Klopp dengan rasa yang creamy dan pas.', imageUrl: 'm.png' },
+      { name: 'Double Espresso', price: 15000, category: 'Coffee', description: 'Ekstra kafein untuk harimu yang produktif.', imageUrl: 'm1.png' },
+      { name: 'Matcha Latte', price: 22000, category: 'Non-Coffee', description: 'Bubuk matcha premium dengan susu segar.', imageUrl: 'm2.png' },
+      { name: 'Croissant Butter', price: 25000, category: 'Snack', description: 'Pastry renyah dengan rasa mentega yang gurih.', imageUrl: 'm3.png' },
+    ];
+
+    try {
+      for (const p of initialProducts) {
+        await addDoc(collection(db, 'products'), {
+          ...p,
+          createdAt: new Date()
+        });
+      }
+      alert('Menu berhasil ditambahkan!');
+    } catch (error) {
+      handleFirestoreError(error, OperationType.WRITE, 'products');
+    }
+  };
+
   const handleSaveReservation = async (data: any) => {
     try {
       await addDoc(collection(db, 'reservations'), {
@@ -623,17 +659,12 @@ export default function App() {
 
   return (
     <ErrorBoundary>
-      <div className="min-h-screen bg-[#FAF9F6] text-gray-900 font-sans selection:bg-amber-100">
+      <div className="min-h-screen bg-[#FAF9F6] text-gray-900 font-sans selection:bg-orange-100">
         {/* Navigation */}
-        <nav className="sticky top-0 z-40 bg-white/80 backdrop-blur-md border-b border-stone-100">
+        <nav className="sticky top-0 z-40 bg-white/80 backdrop-blur-md border-b border-sky-100">
           <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
             <div className="flex justify-between items-center h-20">
-              <div className="flex items-center gap-3">
-                <div className="w-10 h-10 bg-amber-900 rounded-xl flex items-center justify-center text-white shadow-lg shadow-amber-200">
-                  <Coffee className="w-6 h-6" />
-                </div>
-                <h1 className="text-xl font-black tracking-tight text-amber-900">KLOPP <span className="text-amber-600 font-medium">#TempatBercerita</span></h1>
-              </div>
+              <Logo className="scale-90 sm:scale-100" />
 
               <div className="flex items-center gap-4">
                 {user && (
@@ -641,7 +672,7 @@ export default function App() {
                     {isAdmin && (
                       <button 
                         onClick={() => setView(view === 'landing' ? 'admin' : 'landing')}
-                        className="hidden sm:flex items-center gap-2 px-4 py-2 bg-stone-100 text-stone-900 font-bold rounded-xl hover:bg-stone-200 transition-all"
+                        className="hidden sm:flex items-center gap-2 px-4 py-2 bg-sky-100 text-sky-950 font-bold rounded-xl hover:bg-sky-200 transition-all"
                       >
                         {view === 'landing' ? 'Admin Dashboard' : 'View Landing'}
                       </button>
@@ -675,11 +706,11 @@ export default function App() {
                     <motion.h2 
                       initial={{ opacity: 0, x: -20 }}
                       animate={{ opacity: 1, x: 0 }}
-                      className="text-6xl font-black text-stone-900 leading-tight mb-6"
+                      className="text-6xl font-black text-sky-950 leading-tight mb-6"
                     >
-                      Klopp <span className="text-amber-700">#TempatBercerita</span>
+                      Klopp <span className="text-orange-600">#TempatBercerita</span>
                     </motion.h2>
-                    <p className="text-xl text-stone-500 mb-10 leading-relaxed">
+                    <p className="text-xl text-sky-700 mb-10 leading-relaxed">
                       Setiap cangkir kopi punya cerita. Di sini, kami menyediakan ruang 
                       hangat untukmu berbagi, tertawa, dan merangkai kenangan baru.
                     </p>
@@ -687,13 +718,13 @@ export default function App() {
                     <div className="flex flex-col sm:flex-row gap-4">
                       <a 
                         href="#menu"
-                        className="flex items-center justify-center gap-2 px-8 py-4 bg-amber-900 text-white font-bold rounded-2xl hover:bg-amber-800 transition-all shadow-xl shadow-amber-200"
+                        className="flex items-center justify-center gap-2 px-8 py-4 bg-orange-600 text-white font-bold rounded-2xl hover:bg-orange-700 transition-all shadow-xl shadow-orange-200"
                       >
                         Lihat Menu
                       </a>
                       <button 
                         onClick={() => setShowReservationForm(true)}
-                        className="flex items-center justify-center gap-2 px-8 py-4 bg-white text-amber-900 font-bold rounded-2xl border border-amber-100 hover:bg-amber-50 transition-all"
+                        className="flex items-center justify-center gap-2 px-8 py-4 bg-white text-orange-600 font-bold rounded-2xl border border-orange-100 hover:bg-orange-50 transition-all"
                       >
                         Reservasi Meja
                       </button>
@@ -707,19 +738,19 @@ export default function App() {
                   >
                     <div className="aspect-[4/3] rounded-[3rem] overflow-hidden shadow-2xl border-8 border-white rotate-3">
                       <img 
-                        src="https://picsum.photos/seed/klopp-exterior-night-triangular/1200/900" 
+                        src="/Foto/5.png" 
                         alt="Klopp Exterior Night"
                         className="w-full h-full object-cover"
                         referrerPolicy="no-referrer"
                       />
                     </div>
-                    <div className="absolute -top-6 -right-6 w-24 h-24 bg-amber-100 rounded-full -z-10 animate-pulse" />
+                    <div className="absolute -top-6 -right-6 w-24 h-24 bg-orange-100 rounded-full -z-10 animate-pulse" />
                   </motion.div>
                 </div>
               </div>
               
               {/* Decorative Elements */}
-              <div className="absolute top-0 right-0 w-1/3 h-full bg-amber-50 -skew-x-12 translate-x-1/2 -z-0" />
+              <div className="absolute top-0 right-0 w-1/3 h-full bg-orange-50 -skew-x-12 translate-x-1/2 -z-0" />
             </header>
 
             {/* Story Section */}
@@ -734,21 +765,21 @@ export default function App() {
                   >
                     <div className="aspect-[4/5] rounded-3xl overflow-hidden shadow-2xl">
                       <img 
-                        src="https://picsum.photos/seed/klopp-interior-bar-warm/800/1000" 
+                        src="/Foto/2.png" 
                         alt="Klopp Interior Bar"
                         className="w-full h-full object-cover"
                         referrerPolicy="no-referrer"
                       />
                     </div>
-                    <div className="absolute -bottom-10 -right-10 w-64 h-64 bg-amber-100 rounded-3xl -z-10" />
+                    <div className="absolute -bottom-10 -right-10 w-64 h-64 bg-orange-100 rounded-3xl -z-10" />
                   </motion.div>
                   
                   <div>
-                    <span className="text-amber-600 font-bold uppercase tracking-widest text-sm mb-4 block">Our Philosophy</span>
-                    <h2 className="text-4xl font-black text-stone-900 mb-6 leading-tight">
-                      Lebih dari Sekadar Kopi, <br />Ini Tentang <span className="text-amber-700 italic">Koneksi</span>.
+                    <span className="text-orange-600 font-bold uppercase tracking-widest text-sm mb-4 block">Our Philosophy</span>
+                    <h2 className="text-4xl font-black text-sky-950 mb-6 leading-tight">
+                      Lebih dari Sekadar Kopi, <br />Ini Tentang <span className="text-orange-700 italic">Koneksi</span>.
                     </h2>
-                    <div className="space-y-6 text-stone-500 text-lg leading-relaxed">
+                    <div className="space-y-6 text-sky-700 text-lg leading-relaxed">
                       <p>
                         Klopp lahir dari keinginan sederhana: menciptakan tempat di mana 
                         setiap orang merasa diterima. Kami percaya bahwa percakapan terbaik 
@@ -762,21 +793,21 @@ export default function App() {
                     </div>
                     <div className="grid grid-cols-2 gap-8 mt-12">
                       <div className="flex items-start gap-4">
-                        <div className="p-3 bg-amber-50 rounded-xl text-amber-700">
+                        <div className="p-3 bg-orange-50 rounded-xl text-orange-700">
                           <Coffee className="w-6 h-6" />
                         </div>
                         <div>
-                          <h4 className="font-bold text-stone-900">Premium Beans</h4>
-                          <p className="text-sm text-stone-400">Biji kopi pilihan nusantara.</p>
+                          <h4 className="font-bold text-sky-950">Premium Beans</h4>
+                          <p className="text-sm text-sky-600">Biji kopi pilihan nusantara.</p>
                         </div>
                       </div>
                       <div className="flex items-start gap-4">
-                        <div className="p-3 bg-amber-50 rounded-xl text-amber-700">
+                        <div className="p-3 bg-orange-50 rounded-xl text-orange-700">
                           <MessageSquare className="w-6 h-6" />
                         </div>
                         <div>
-                          <h4 className="font-bold text-stone-900">Warm Space</h4>
-                          <p className="text-sm text-stone-400">Suasana nyaman untuk bercerita.</p>
+                          <h4 className="font-bold text-sky-950">Warm Space</h4>
+                          <p className="text-sm text-sky-600">Suasana nyaman untuk bercerita.</p>
                         </div>
                       </div>
                     </div>
@@ -786,28 +817,28 @@ export default function App() {
             </section>
 
             {/* Main Content (Menu) */}
-            <main id="menu" className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-20 border-t border-stone-100">
+            <main id="menu" className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-20 border-t border-sky-100">
               <div className="text-center mb-16">
-                <span className="text-amber-600 font-bold uppercase tracking-widest text-sm mb-4 block">Our Selection</span>
-                <h2 className="text-4xl font-black text-stone-900">Menu Favorit Kami</h2>
+                <span className="text-orange-600 font-bold uppercase tracking-widest text-sm mb-4 block">Our Selection</span>
+                <h2 className="text-4xl font-black text-sky-950">Menu Favorit Kami</h2>
               </div>
 
               <div className="flex flex-col sm:flex-row gap-4 mb-10 items-center justify-center">
                 <div className="relative w-full max-w-md">
-                  <Search className="absolute left-4 top-1/2 -translate-y-1/2 text-stone-400 w-5 h-5" />
+                  <Search className="absolute left-4 top-1/2 -translate-y-1/2 text-sky-400 w-5 h-5" />
                   <input 
                     type="text" 
                     placeholder="Cari menu..."
                     value={searchTerm}
                     onChange={e => setSearchTerm(e.target.value)}
-                    className="w-full pl-12 pr-4 py-3 bg-white border border-stone-100 rounded-2xl focus:ring-2 focus:ring-amber-500 transition-all shadow-sm"
+                    className="w-full pl-12 pr-4 py-3 bg-white border border-sky-100 rounded-2xl focus:ring-2 focus:ring-orange-500 transition-all shadow-sm"
                   />
                 </div>
               </div>
               <div className="flex flex-wrap gap-4 mb-12 items-center justify-center">
-                <div className="flex items-center gap-2 px-4 py-2 bg-white rounded-full shadow-sm border border-stone-100">
-                  <Filter className="w-4 h-4 text-amber-700" />
-                  <span className="text-sm font-bold text-stone-900">Menu:</span>
+                <div className="flex items-center gap-2 px-4 py-2 bg-white rounded-full shadow-sm border border-sky-100">
+                  <Filter className="w-4 h-4 text-orange-700" />
+                  <span className="text-sm font-bold text-sky-950">Menu:</span>
                 </div>
                 {categories.map(cat => (
                   <button
@@ -815,8 +846,8 @@ export default function App() {
                     onClick={() => setSelectedCategory(cat)}
                     className={`px-6 py-2 rounded-full text-sm font-bold transition-all whitespace-nowrap ${
                       selectedCategory === cat 
-                        ? 'bg-amber-900 text-white shadow-lg' 
-                        : 'bg-white text-stone-500 hover:bg-stone-100 border border-stone-100'
+                        ? 'bg-orange-600 text-white shadow-lg' 
+                        : 'bg-white text-sky-700 hover:bg-sky-100 border border-sky-100'
                     }`}
                   >
                     {cat}
@@ -864,52 +895,52 @@ export default function App() {
             </main>
 
             {/* Location Section */}
-            <section id="location" className="py-24 bg-stone-50">
+            <section id="location" className="py-24 bg-sky-50">
               <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
                 <div className="grid grid-cols-1 lg:grid-cols-2 gap-12 items-center">
                   <div>
-                    <span className="text-amber-600 font-bold uppercase tracking-widest text-sm mb-4 block">Visit Us</span>
-                    <h2 className="text-4xl font-black text-stone-900 mb-8">Temukan Kami di Tangerang</h2>
+                    <span className="text-orange-600 font-bold uppercase tracking-widest text-sm mb-4 block">Visit Us</span>
+                    <h2 className="text-4xl font-black text-sky-950 mb-8">Temukan Kami di Tangerang</h2>
                     
                     <div className="space-y-8">
                       <div className="flex items-start gap-5">
-                        <div className="p-4 bg-white rounded-2xl shadow-sm text-amber-700">
+                        <div className="p-4 bg-white rounded-2xl shadow-sm text-orange-700">
                           <MapPin className="w-6 h-6" />
                         </div>
                         <div>
-                          <h4 className="font-bold text-stone-900 text-lg mb-1">Alamat</h4>
-                          <p className="text-stone-500 leading-relaxed max-w-sm">
+                          <h4 className="font-bold text-sky-950 text-lg mb-1">Alamat</h4>
+                          <p className="text-sky-700 leading-relaxed max-w-sm">
                             Jl. Perumahan Bumi Indah Raya Komersial Area No.L-06, RW.06, Gelam Jaya, Kabupaten Tangerang, Banten 15560
                           </p>
                         </div>
                       </div>
                       
                       <div className="flex items-start gap-5">
-                        <div className="p-4 bg-white rounded-2xl shadow-sm text-amber-700">
+                        <div className="p-4 bg-white rounded-2xl shadow-sm text-orange-700">
                           <Clock className="w-6 h-6" />
                         </div>
                         <div>
-                          <h4 className="font-bold text-stone-900 text-lg mb-1">Jam Operasional</h4>
-                          <p className="text-stone-500">Senin - Minggu: 09:00 - 22:00</p>
+                          <h4 className="font-bold text-sky-950 text-lg mb-1">Jam Operasional</h4>
+                          <p className="text-sky-700">Senin - Minggu: 09:00 - 22:00</p>
                         </div>
                       </div>
                       
                       <div className="flex items-start gap-5">
-                        <div className="p-4 bg-white rounded-2xl shadow-sm text-amber-700">
-                          <Phone className="w-6 h-6" />
+                        <div className="p-4 bg-white rounded-2xl shadow-sm text-orange-700">
+                          <Mail className="w-6 h-6" />
                         </div>
                         <div>
-                          <h4 className="font-bold text-stone-900 text-lg mb-1">Kontak</h4>
-                          <p className="text-stone-500">+62 812-3456-7890</p>
+                          <h4 className="font-bold text-sky-950 text-lg mb-1">Email</h4>
+                          <p className="text-sky-700">klopptempatbercerita@gmail.com</p>
                         </div>
                       </div>
                     </div>
                     
                     <div className="mt-12 flex gap-4">
-                      <a href="https://instagram.com" className="p-4 bg-white rounded-2xl shadow-sm text-stone-400 hover:text-amber-700 transition-colors">
+                      <a href="https://www.instagram.com/klopp.tb/" className="p-4 bg-white rounded-2xl shadow-sm text-sky-400 hover:text-orange-700 transition-colors">
                         <Instagram className="w-6 h-6" />
                       </a>
-                      <a href="https://wa.me/6281234567890" className="p-4 bg-white rounded-2xl shadow-sm text-stone-400 hover:text-amber-700 transition-colors">
+                      <a href="https://wa.me/628152101982" className="p-4 bg-white rounded-2xl shadow-sm text-sky-400 hover:text-orange-700 transition-colors">
                         <MessageSquare className="w-6 h-6" />
                       </a>
                     </div>
@@ -934,8 +965,8 @@ export default function App() {
             <section className="py-24 bg-white">
               <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
                 <div className="text-center mb-16">
-                  <span className="text-amber-600 font-bold uppercase tracking-widest text-sm mb-4 block">Our Atmosphere</span>
-                  <h2 className="text-4xl font-black text-stone-900">Sudut Klopp #TempatBercerita</h2>
+                  <span className="text-orange-600 font-bold uppercase tracking-widest text-sm mb-4 block">Our Atmosphere</span>
+                  <h2 className="text-4xl font-black text-sky-950">Sudut Klopp #TempatBercerita</h2>
                 </div>
                 
                 <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
@@ -944,7 +975,7 @@ export default function App() {
                     className="md:col-span-2 h-[400px] rounded-3xl overflow-hidden shadow-lg"
                   >
                     <img 
-                      src="https://picsum.photos/seed/klopp-sunset-triangular/1200/800" 
+                      src="/Foto/3.png" 
                       alt="Klopp Sunset View" 
                       className="w-full h-full object-cover"
                       referrerPolicy="no-referrer"
@@ -955,7 +986,7 @@ export default function App() {
                     className="h-[400px] rounded-3xl overflow-hidden shadow-lg"
                   >
                     <img 
-                      src="https://picsum.photos/seed/klopp-coffee-machine-close/800/800" 
+                      src="/Foto/4.png" 
                       alt="Klopp Coffee Machine" 
                       className="w-full h-full object-cover"
                       referrerPolicy="no-referrer"
@@ -966,7 +997,18 @@ export default function App() {
                     className="h-[400px] rounded-3xl overflow-hidden shadow-lg"
                   >
                     <img 
-                      src="https://picsum.photos/seed/klopp-mural-art/800/800" 
+                      src="/Foto/6.png" 
+                      alt="Klopp Signage" 
+                      className="w-full h-full object-cover"
+                      referrerPolicy="no-referrer"
+                    />
+                  </motion.div>
+                  <motion.div 
+                    whileHover={{ scale: 1.02 }}
+                    className="h-[400px] rounded-3xl overflow-hidden shadow-lg"
+                  >
+                    <img 
+                      src="/Foto/1.png" 
                       alt="Klopp Mural Art" 
                       className="w-full h-full object-cover"
                       referrerPolicy="no-referrer"
@@ -977,7 +1019,7 @@ export default function App() {
                     className="md:col-span-2 h-[400px] rounded-3xl overflow-hidden shadow-lg"
                   >
                     <img 
-                      src="https://picsum.photos/seed/klopp-parking-crowd/1200/800" 
+                      src="/Foto/3.png" 
                       alt="Klopp Parking Crowd" 
                       className="w-full h-full object-cover"
                       referrerPolicy="no-referrer"
@@ -988,17 +1030,12 @@ export default function App() {
             </section>
 
             {/* Footer */}
-            <footer className="bg-stone-900 py-20 text-white">
+            <footer className="bg-sky-950 py-20 text-white">
               <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
                 <div className="grid grid-cols-1 md:grid-cols-4 gap-12 mb-16">
                   <div className="col-span-1 md:col-span-2">
-                    <div className="flex items-center gap-3 mb-6">
-                      <div className="w-10 h-10 bg-amber-700 rounded-xl flex items-center justify-center text-white">
-                        <Coffee className="w-6 h-6" />
-                      </div>
-                      <span className="text-2xl font-black tracking-tight">KLOPP <span className="text-amber-500">#TempatBercerita</span></span>
-                    </div>
-                    <p className="text-stone-400 max-w-sm leading-relaxed">
+                    <Logo light className="items-start mb-6" />
+                    <p className="text-sky-300 max-w-sm leading-relaxed">
                       Ruang hangat untuk berbagi cerita, merayakan momen, dan menikmati 
                       kopi terbaik di jantung Kota Tangerang.
                     </p>
@@ -1006,33 +1043,33 @@ export default function App() {
                   
                   <div>
                     <h4 className="font-bold mb-6 text-lg">Quick Links</h4>
-                    <ul className="space-y-4 text-stone-400">
-                      <li><a href="#" className="hover:text-amber-500 transition-colors">Home</a></li>
-                      <li><a href="#menu" className="hover:text-amber-500 transition-colors">Menu</a></li>
-                      <li><button onClick={() => setShowReservationForm(true)} className="hover:text-amber-500 transition-colors text-left">Reservasi</button></li>
-                      <li><a href="#location" className="hover:text-amber-500 transition-colors">Lokasi</a></li>
+                    <ul className="space-y-4 text-sky-400">
+                      <li><a href="#" className="hover:text-orange-400 transition-colors">Home</a></li>
+                      <li><a href="#menu" className="hover:text-orange-400 transition-colors">Menu</a></li>
+                      <li><button onClick={() => setShowReservationForm(true)} className="hover:text-orange-400 transition-colors text-left">Reservasi</button></li>
+                      <li><a href="#location" className="hover:text-orange-400 transition-colors">Lokasi</a></li>
                     </ul>
                   </div>
                   
                   <div>
                     <h4 className="font-bold mb-6 text-lg">Support</h4>
-                    <ul className="space-y-4 text-stone-400">
-                      <li><a href="#" className="hover:text-amber-500 transition-colors">Bantuan</a></li>
-                      <li><a href="#" className="hover:text-amber-500 transition-colors">Kebijakan Privasi</a></li>
-                      <li><a href="#" className="hover:text-amber-500 transition-colors">Syarat & Ketentuan</a></li>
+                    <ul className="space-y-4 text-sky-400">
+                      <li><a href="#" className="hover:text-orange-400 transition-colors">Bantuan</a></li>
+                      <li><a href="#" className="hover:text-orange-400 transition-colors">Kebijakan Privasi</a></li>
+                      <li><a href="#" className="hover:text-orange-400 transition-colors">Syarat & Ketentuan</a></li>
                       <li>
                         {!user ? (
                           <button 
                             onClick={() => setShowLoginForm(true)}
                             disabled={isLoggingIn}
-                            className="hover:text-amber-500 transition-colors text-left flex items-center gap-2"
+                            className="hover:text-orange-400 transition-colors text-left flex items-center gap-2"
                           >
                             {isLoggingIn ? 'Signing In...' : 'Sign In admin'}
                           </button>
                         ) : (
                           <button 
                             onClick={handleLogout}
-                            className="hover:text-red-500 transition-colors text-left"
+                            className="hover:text-red-400 transition-colors text-left"
                           >
                             Sign Out
                           </button>
@@ -1042,11 +1079,11 @@ export default function App() {
                   </div>
                 </div>
                 
-                <div className="pt-12 border-t border-stone-800 flex flex-col md:flex-row justify-between items-center gap-6">
-                  <p className="text-stone-500 text-sm italic">© 2026 Klopp #TempatBercerita. Handcrafted with passion.</p>
+                <div className="pt-12 border-t border-sky-900 flex flex-col md:flex-row justify-between items-center gap-6">
+                  <p className="text-sky-500 text-sm italic">© 2026 Klopp #TempatBercerita. Handcrafted with passion.</p>
                   <div className="flex gap-6">
-                    <a href="#" className="text-stone-500 hover:text-white transition-colors"><Instagram className="w-5 h-5" /></a>
-                    <a href="#" className="text-stone-500 hover:text-white transition-colors"><MessageSquare className="w-5 h-5" /></a>
+                    <a href="https://www.instagram.com/klopp.tb/" className="text-sky-500 hover:text-white transition-colors"><Instagram className="w-5 h-5" /></a>
+                    <a href="https://wa.me/628152101982" className="text-sky-500 hover:text-white transition-colors"><MessageSquare className="w-5 h-5" /></a>
                   </div>
                 </div>
               </div>
@@ -1056,19 +1093,19 @@ export default function App() {
           <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-12">
             <div className="flex flex-col md:flex-row justify-between items-start md:items-center gap-6 mb-12">
               <div>
-                <h2 className="text-4xl font-black text-stone-900 mb-2">Admin Dashboard</h2>
-                <p className="text-stone-500">Kelola menu dan reservasi Klopp #TempatBercerita</p>
+                <h2 className="text-4xl font-black text-sky-950 mb-2">Admin Dashboard</h2>
+                <p className="text-sky-700">Kelola menu dan reservasi Klopp #TempatBercerita</p>
               </div>
               <div className="flex gap-3">
                 <button 
                   onClick={() => setAdminTab('products')}
-                  className={`px-6 py-3 rounded-2xl font-bold transition-all ${adminTab === 'products' ? 'bg-amber-900 text-white shadow-lg shadow-amber-200' : 'bg-white text-stone-500 hover:bg-stone-50 border border-stone-100'}`}
+                  className={`px-6 py-3 rounded-2xl font-bold transition-all ${adminTab === 'products' ? 'bg-orange-600 text-white shadow-lg shadow-orange-200' : 'bg-white text-sky-700 hover:bg-sky-50 border border-sky-100'}`}
                 >
                   CRUD Produk
                 </button>
                 <button 
                   onClick={() => setAdminTab('reservations')}
-                  className={`px-6 py-3 rounded-2xl font-bold transition-all ${adminTab === 'reservations' ? 'bg-amber-900 text-white shadow-lg shadow-amber-200' : 'bg-white text-stone-500 hover:bg-stone-50 border border-stone-100'}`}
+                  className={`px-6 py-3 rounded-2xl font-bold transition-all ${adminTab === 'reservations' ? 'bg-orange-600 text-white shadow-lg shadow-orange-200' : 'bg-white text-sky-700 hover:bg-sky-50 border border-sky-100'}`}
                 >
                   Data Reservasi
                 </button>
@@ -1080,27 +1117,34 @@ export default function App() {
                 <div className="flex flex-col md:flex-row justify-between items-center gap-6 mb-10">
                   <button 
                     onClick={() => setShowForm(true)}
-                    className="w-full md:w-auto flex items-center justify-center gap-2 px-8 py-4 bg-amber-900 text-white font-bold rounded-2xl hover:bg-amber-800 transition-all shadow-xl shadow-amber-200"
+                    className="w-full md:w-auto flex items-center justify-center gap-2 px-8 py-4 bg-orange-600 text-white font-bold rounded-2xl hover:bg-orange-700 transition-all shadow-xl shadow-orange-200"
                   >
                     <Plus className="w-5 h-5" />
                     Tambah Menu Baru
                   </button>
                   
                   <div className="flex flex-col sm:flex-row gap-4 w-full md:w-auto">
+                    <button 
+                      onClick={handleSeedMenu}
+                      className="flex items-center justify-center gap-2 px-6 py-4 bg-sky-100 text-sky-700 font-bold rounded-2xl hover:bg-sky-200 transition-all"
+                    >
+                      <Plus className="w-5 h-5" />
+                      Seed Menu Contoh
+                    </button>
                     <div className="relative">
-                      <Search className="absolute left-4 top-1/2 -translate-y-1/2 text-stone-400 w-5 h-5" />
+                      <Search className="absolute left-4 top-1/2 -translate-y-1/2 text-sky-400 w-5 h-5" />
                       <input 
                         type="text" 
                         placeholder="Cari menu..."
                         value={searchTerm}
                         onChange={e => setSearchTerm(e.target.value)}
-                        className="w-full pl-12 pr-4 py-3 bg-white border border-stone-100 rounded-2xl focus:ring-2 focus:ring-amber-500 transition-all shadow-sm"
+                        className="w-full pl-12 pr-4 py-3 bg-white border border-sky-100 rounded-2xl focus:ring-2 focus:ring-orange-500 transition-all shadow-sm"
                       />
                     </div>
                     <select 
                       value={selectedCategory}
                       onChange={e => setSelectedCategory(e.target.value)}
-                      className="px-4 py-3 bg-white border border-stone-100 rounded-2xl focus:ring-2 focus:ring-amber-500 transition-all shadow-sm font-bold text-stone-600"
+                      className="px-4 py-3 bg-white border border-sky-100 rounded-2xl focus:ring-2 focus:ring-orange-500 transition-all shadow-sm font-bold text-sky-600"
                     >
                       {categories.map(cat => <option key={cat} value={cat}>{cat}</option>)}
                     </select>
@@ -1133,32 +1177,32 @@ export default function App() {
                 )}
               </>
             ) : (
-              <div className="bg-white rounded-3xl shadow-sm border border-stone-100 overflow-hidden">
+              <div className="bg-white rounded-3xl shadow-sm border border-sky-100 overflow-hidden">
                 <div className="overflow-x-auto">
                   <table className="w-full text-left">
                     <thead>
-                      <tr className="bg-stone-50 border-b border-stone-100">
-                        <th className="px-6 py-4 text-xs font-bold text-stone-400 uppercase tracking-widest">Customer</th>
-                        <th className="px-6 py-4 text-xs font-bold text-stone-400 uppercase tracking-widest">Waktu</th>
-                        <th className="px-6 py-4 text-xs font-bold text-stone-400 uppercase tracking-widest">Tamu</th>
-                        <th className="px-6 py-4 text-xs font-bold text-stone-400 uppercase tracking-widest">Status</th>
-                        <th className="px-6 py-4 text-xs font-bold text-stone-400 uppercase tracking-widest text-right">Aksi</th>
+                      <tr className="bg-sky-50 border-b border-sky-100">
+                        <th className="px-6 py-4 text-xs font-bold text-sky-400 uppercase tracking-widest">Customer</th>
+                        <th className="px-6 py-4 text-xs font-bold text-sky-400 uppercase tracking-widest">Waktu</th>
+                        <th className="px-6 py-4 text-xs font-bold text-sky-400 uppercase tracking-widest">Tamu</th>
+                        <th className="px-6 py-4 text-xs font-bold text-sky-400 uppercase tracking-widest">Status</th>
+                        <th className="px-6 py-4 text-xs font-bold text-sky-400 uppercase tracking-widest text-right">Aksi</th>
                       </tr>
                     </thead>
-                    <tbody className="divide-y divide-stone-50">
+                    <tbody className="divide-y divide-sky-50">
                       {reservations.length > 0 ? (
                         reservations.map(res => (
-                          <tr key={res.id} className="hover:bg-stone-50/50 transition-colors">
+                          <tr key={res.id} className="hover:bg-sky-50/50 transition-colors">
                             <td className="px-6 py-4">
-                              <p className="font-bold text-stone-900">{res.name}</p>
-                              <p className="text-xs text-stone-400">{res.phone}</p>
+                              <p className="font-bold text-sky-950">{res.name}</p>
+                              <p className="text-xs text-sky-400">{res.phone}</p>
                             </td>
                             <td className="px-6 py-4">
-                              <p className="text-sm font-medium text-stone-600">{res.date}</p>
-                              <p className="text-xs text-stone-400">{res.time}</p>
+                              <p className="text-sm font-medium text-sky-700">{res.date}</p>
+                              <p className="text-xs text-sky-400">{res.time}</p>
                             </td>
                             <td className="px-6 py-4">
-                              <span className="px-3 py-1 bg-stone-100 text-stone-600 rounded-full text-xs font-bold">
+                              <span className="px-3 py-1 bg-sky-100 text-sky-700 rounded-full text-xs font-bold">
                                 {res.guests} Orang
                               </span>
                             </td>
@@ -1166,10 +1210,10 @@ export default function App() {
                               <select 
                                 value={res.status}
                                 onChange={(e) => handleUpdateReservationStatus(res.id, e.target.value)}
-                                className={`text-xs font-bold px-3 py-1 rounded-full border-none focus:ring-2 focus:ring-amber-500 transition-all ${
+                                className={`text-xs font-bold px-3 py-1 rounded-full border-none focus:ring-2 focus:ring-orange-500 transition-all ${
                                   res.status === 'confirmed' ? 'bg-green-100 text-green-700' :
                                   res.status === 'cancelled' ? 'bg-red-100 text-red-700' :
-                                  'bg-amber-100 text-amber-700'
+                                  'bg-orange-100 text-orange-700'
                                 }`}
                               >
                                 <option value="pending">Pending</option>
@@ -1180,7 +1224,7 @@ export default function App() {
                             <td className="px-6 py-4 text-right">
                               <button 
                                 onClick={() => handleDeleteReservation(res.id)}
-                                className="p-2 text-stone-300 hover:text-red-600 transition-colors"
+                                className="p-2 text-sky-300 hover:text-red-600 transition-colors"
                               >
                                 <Trash2 className="w-5 h-5" />
                               </button>
@@ -1189,7 +1233,7 @@ export default function App() {
                         ))
                       ) : (
                         <tr>
-                          <td colSpan={5} className="px-6 py-20 text-center text-stone-400 italic">
+                          <td colSpan={5} className="px-6 py-20 text-center text-sky-400 italic">
                             Belum ada data reservasi.
                           </td>
                         </tr>
