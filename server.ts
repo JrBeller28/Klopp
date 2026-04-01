@@ -93,12 +93,20 @@ const authenticate = async (req: any, res: any, next: any) => {
 // Auth
 app.post("/api/auth/login", async (req, res) => {
   const { username, password } = req.body;
+  
+  // Check DB connection first
+  if (mongoose.connection.readyState !== 1) {
+    return res.status(503).json({ 
+      message: "Database belum terhubung. Periksa MONGODB_URI di Secrets dan pastikan tidak ada tanda < > pada password." 
+    });
+  }
+
   try {
     const user = await User.findOne({ username });
-    if (!user) return res.status(401).json({ message: "Invalid credentials" });
+    if (!user) return res.status(401).json({ message: "Username atau password salah." });
 
     const isMatch = await bcrypt.compare(password, user.password);
-    if (!isMatch) return res.status(401).json({ message: "Invalid credentials" });
+    if (!isMatch) return res.status(401).json({ message: "Username atau password salah." });
 
     const token = jwt.sign({ id: user._id }, JWT_SECRET, { expiresIn: "1d" });
     res.cookie("token", token, {
@@ -109,7 +117,8 @@ app.post("/api/auth/login", async (req, res) => {
     });
     res.json({ user: { username: user.username, role: user.role } });
   } catch (err) {
-    res.status(500).json({ message: "Server error" });
+    console.error("Login error:", err);
+    res.status(500).json({ message: "Terjadi kesalahan pada server." });
   }
 });
 
