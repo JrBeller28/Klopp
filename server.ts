@@ -20,7 +20,7 @@ const JWT_SECRET = process.env.JWT_SECRET || "klopp-secret-key";
 // --- Database Models ---
 
 const userSchema = new mongoose.Schema({
-  email: { type: String, required: true, unique: true },
+  username: { type: String, required: true, unique: true },
   password: { type: String, required: true },
   role: { type: String, default: "admin" },
 });
@@ -75,9 +75,9 @@ const authenticate = async (req: any, res: any, next: any) => {
 
 // Auth
 app.post("/api/auth/login", async (req, res) => {
-  const { email, password } = req.body;
+  const { username, password } = req.body;
   try {
-    const user = await User.findOne({ email });
+    const user = await User.findOne({ username });
     if (!user) return res.status(401).json({ message: "Invalid credentials" });
 
     const isMatch = await bcrypt.compare(password, user.password);
@@ -90,7 +90,7 @@ app.post("/api/auth/login", async (req, res) => {
       sameSite: "none",
       maxAge: 24 * 60 * 60 * 1000
     });
-    res.json({ user: { email: user.email, role: user.role } });
+    res.json({ user: { username: user.username, role: user.role } });
   } catch (err) {
     res.status(500).json({ message: "Server error" });
   }
@@ -106,7 +106,7 @@ app.post("/api/auth/logout", (req, res) => {
 });
 
 app.get("/api/auth/me", authenticate, (req: any, res) => {
-  res.json({ user: { email: req.user.email, role: req.user.role } });
+  res.json({ user: { username: req.user.username, role: req.user.role } });
 });
 
 // Products
@@ -205,12 +205,12 @@ async function startServer() {
     console.log("Connected to MongoDB successfully");
 
     // Seed admin user if not exists
-    const adminEmail = process.env.ADMIN_EMAIL || "muhammad.adjiprasetyo28@gmail.com";
-    const adminPassword = process.env.ADMIN_PASSWORD || "admin123";
-    const adminExists = await User.findOne({ email: adminEmail });
+    const adminUsername = process.env.ADMIN_USERNAME || "admin";
+    const adminPassword = process.env.ADMIN_PASSWORD || "adminklopp";
+    const adminExists = await User.findOne({ username: adminUsername });
     if (!adminExists) {
       const hashedPassword = await bcrypt.hash(adminPassword, 10);
-      await User.create({ email: adminEmail, password: hashedPassword });
+      await User.create({ username: adminUsername, password: hashedPassword });
       console.log("Admin user created");
     }
 

@@ -363,7 +363,7 @@ const LoginForm = ({ onLogin, onCancel }: {
   onLogin: (user: any) => void, 
   onCancel: () => void 
 }) => {
-  const [email, setEmail] = useState('');
+  const [username, setUsername] = useState('');
   const [password, setPassword] = useState('');
   const [error, setError] = useState('');
   const [loading, setLoading] = useState(false);
@@ -376,7 +376,7 @@ const LoginForm = ({ onLogin, onCancel }: {
       const res = await fetch('/api/auth/login', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ email, password })
+        body: JSON.stringify({ username, password })
       });
       const data = await res.json();
       if (res.ok) {
@@ -406,14 +406,14 @@ const LoginForm = ({ onLogin, onCancel }: {
           <h2 className="text-2xl font-bold text-sky-950 mb-6 text-center">Sign In Admin</h2>
           <form onSubmit={handleSubmit} className="space-y-4">
             <div>
-              <label className="block text-xs font-bold text-sky-400 uppercase tracking-widest mb-1">Email</label>
+              <label className="block text-xs font-bold text-sky-400 uppercase tracking-widest mb-1">Username</label>
               <input 
-                type="email" 
+                type="text" 
                 required
-                value={email} 
-                onChange={e => setEmail(e.target.value)}
+                value={username} 
+                onChange={e => setUsername(e.target.value)}
                 className="w-full px-4 py-3 bg-sky-50 border-none rounded-xl focus:ring-2 focus:ring-orange-500 transition-all outline-none"
-                placeholder="admin@klopp.cafe"
+                placeholder="admin"
               />
             </div>
             <div>
@@ -681,10 +681,14 @@ export default function App() {
                       </button>
                     )}
                     <div className="hidden sm:block text-right">
-                      <p className="text-sm font-bold text-gray-900">{user.displayName}</p>
+                      <p className="text-sm font-bold text-gray-900">{user.username}</p>
                       <p className="text-xs text-gray-500">{isAdmin ? 'Administrator' : 'Customer'}</p>
                     </div>
-                    <img src={user.photoURL || ''} alt="" className="w-10 h-10 rounded-full border-2 border-orange-100" />
+                    <img 
+                      src={user.photoURL || `https://ui-avatars.com/api/?name=${user.username}&background=78350f&color=fff`} 
+                      alt="" 
+                      className="w-10 h-10 rounded-full border-2 border-orange-100" 
+                    />
                     <button 
                       onClick={handleLogout}
                       className="p-2 text-gray-400 hover:text-red-600 transition-colors"
