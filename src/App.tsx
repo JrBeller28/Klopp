@@ -4,12 +4,31 @@
  */
 
 import React, { useState, useEffect, useMemo, Component } from 'react';
+import { 
+  auth, 
+  db, 
+  googleProvider, 
+  signInWithPopup, 
+  signOut, 
+  onAuthStateChanged, 
+  collection, 
+  onSnapshot, 
+  addDoc, 
+  updateDoc, 
+  deleteDoc, 
+  doc, 
+  query, 
+  orderBy, 
+  handleFirestoreError, 
+  OperationType,
+  User
+} from './firebase';
 import { LogIn, LogOut, Plus, Trash2, Edit2, Coffee, Search, Filter, ShoppingCart, Star, Utensils, MapPin, Clock, Phone, Instagram, MessageSquare, Mail } from 'lucide-react';
 import { motion, AnimatePresence } from 'motion/react';
 
 // --- Types ---
 interface Product {
-  _id: string;
+  id: string;
   name: string;
   description?: string;
   price: number;
@@ -20,7 +39,7 @@ interface Product {
 }
 
 interface Reservation {
-  _id: string;
+  id: string;
   name: string;
   email?: string;
   phone: string;
@@ -125,7 +144,7 @@ const ProductCard = ({ product, isAdmin, onEdit, onDelete }: {
         <h3 className="text-lg font-bold text-gray-900 mb-1 line-clamp-1">{product.name}</h3>
         <p className="text-sm text-gray-500 mb-4 line-clamp-2 h-10">{product.description || "No description provided."}</p>
         <div className="flex items-center justify-between">
-          <span className="text-xl font-black text-gray-900">Rp {product.price.toLocaleString()}</span>
+          <span className="text-xl font-black text-gray-900">${product.price.toLocaleString()}</span>
           <button className="p-2 bg-orange-600 text-white rounded-full hover:bg-orange-700 transition-colors">
             <ShoppingCart className="w-5 h-5" />
           </button>
@@ -141,7 +160,7 @@ const ProductCard = ({ product, isAdmin, onEdit, onDelete }: {
             <Edit2 className="w-4 h-4" />
           </button>
           <button 
-            onClick={() => onDelete(product._id)}
+            onClick={() => onDelete(product.id)}
             className="p-2 bg-white/90 backdrop-blur shadow-sm rounded-full text-red-600 hover:bg-red-600 hover:text-white transition-all"
           >
             <Trash2 className="w-4 h-4" />
@@ -366,60 +385,13 @@ const LoginForm = ({ onLogin, onCancel }: {
   const [username, setUsername] = useState('');
   const [password, setPassword] = useState('');
   const [error, setError] = useState('');
-  const [loading, setLoading] = useState(false);
 
-  const [apiStatus, setApiStatus] = useState<'checking' | 'ok' | 'error'>('checking');
-  const [apiError, setApiError] = useState<string | null>(null);
-
-  useEffect(() => {
-    const checkHealth = async () => {
-      try {
-        const res = await fetch('/api/health');
-        if (res.ok) {
-          const data = await res.json();
-          if (data.error) setApiError(data.error);
-          setApiStatus('ok');
-        } else {
-          setApiStatus('error');
-          setApiError(`Server returned status ${res.status}`);
-        }
-      } catch (err) {
-        setApiStatus('error');
-        setApiError('Gagal menghubungi server. Pastikan backend berjalan.');
-      }
-    };
-    checkHealth();
-  }, []);
-
-  const handleSubmit = async (e: React.FormEvent) => {
+  const handleSubmit = (e: React.FormEvent) => {
     e.preventDefault();
-    setLoading(true);
-    setError('');
-    try {
-      const res = await fetch('/api/auth/login', {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ username, password })
-      });
-      
-      if (res.ok) {
-        const data = await res.json();
-        onLogin(data.user);
-      } else {
-        const errorText = await res.text();
-        console.error('Login failed:', res.status, errorText);
-        try {
-          const errorData = JSON.parse(errorText);
-          setError(errorData.message || 'Login gagal.');
-        } catch {
-          setError(`Server error (${res.status}).`);
-        }
-      }
-    } catch (err) {
-      console.error('Network error during login:', err);
-      setError('Terjadi kesalahan koneksi. Periksa MONGODB_URI di Secrets.');
-    } finally {
-      setLoading(false);
+    if (username === 'admin' && password === 'adminklopp') {
+      onLogin({ displayName: 'Admin Klopp', email: 'admin@klopp.cafe', photoURL: 'https://ui-avatars.com/api/?name=Admin+Klopp&background=78350f&color=fff' });
+    } else {
+      setError('Username atau password salah.');
     }
   };
 
@@ -459,19 +431,13 @@ const LoginForm = ({ onLogin, onCancel }: {
                 placeholder="••••••••"
               />
             </div>
-            {(apiStatus === 'error' || apiError) && (
-              <p className="text-red-500 text-xs font-bold bg-red-50 p-2 rounded text-center border border-red-100">
-                {apiError || "Server tidak merespon. Pastikan backend berjalan."}
-              </p>
-            )}
-            {error && <p className="text-red-500 text-xs font-bold bg-red-50 p-2 rounded text-center border border-red-100">{error}</p>}
+            {error && <p className="text-red-500 text-xs font-bold">{error}</p>}
             <div className="flex gap-3 mt-8">
               <button 
                 type="submit"
-                disabled={loading}
-                className="flex-1 py-4 bg-orange-600 text-white font-bold rounded-2xl hover:bg-orange-700 transition-all shadow-lg shadow-orange-200 disabled:opacity-50"
+                className="flex-1 py-4 bg-orange-600 text-white font-bold rounded-2xl hover:bg-orange-700 transition-all shadow-lg shadow-orange-200"
               >
-                {loading ? 'Signing In...' : 'Sign In'}
+                Sign In
               </button>
               <button 
                 type="button"
@@ -491,7 +457,10 @@ const LoginForm = ({ onLogin, onCancel }: {
 // --- Main App ---
 
 export default function App() {
-  const [user, setUser] = useState<any>(null);
+  const [firebaseUser, setFirebaseUser] = useState<User | null>(null);
+  const [customUser, setCustomUser] = useState<any>(null);
+  const user = firebaseUser || customUser;
+  
   const [products, setProducts] = useState<Product[]>([]);
   const [reservations, setReservations] = useState<Reservation[]>([]);
   const [loading, setLoading] = useState(true);
@@ -506,7 +475,7 @@ export default function App() {
   const [adminTab, setAdminTab] = useState<'products' | 'reservations'>('products');
 
   const isAdmin = useMemo(() => {
-    return user?.role === 'admin';
+    return user?.email === "muhammad.adjiprasetyo28@gmail.com" || user?.email === "admin@klopp.cafe";
   }, [user]);
 
   useEffect(() => {
@@ -518,99 +487,105 @@ export default function App() {
   }, [isAdmin]);
 
   useEffect(() => {
-    const checkAuth = async () => {
-      try {
-        const res = await fetch('/api/auth/me');
-        if (res.ok) {
-          const data = await res.json();
-          setUser(data.user);
-        }
-      } catch (err) {
-        console.error("Auth check failed");
-      } finally {
-        setIsAuthReady(true);
-      }
-    };
-    checkAuth();
+    const unsubscribe = onAuthStateChanged(auth, (u) => {
+      setFirebaseUser(u);
+      setIsAuthReady(true);
+    });
+    return () => unsubscribe();
   }, []);
 
   const handleLogout = async () => {
-    try {
-      await fetch('/api/auth/logout', { method: 'POST' });
-      setUser(null);
-      setView('landing');
-    } catch (error) {
-      console.error("Logout failed:", error);
-    }
-  };
-
-  const fetchProducts = async () => {
-    try {
-      const res = await fetch('/api/products');
-      if (res.ok) {
-        const data = await res.json();
-        setProducts(data);
+    if (customUser) {
+      setCustomUser(null);
+    } else {
+      try {
+        await signOut(auth);
+      } catch (error) {
+        console.error("Logout failed:", error);
       }
-    } catch (err) {
-      console.error("Fetch products failed");
-    } finally {
-      setLoading(false);
     }
-  };
-
-  const fetchReservations = async () => {
-    try {
-      const res = await fetch('/api/reservations');
-      if (res.ok) {
-        const data = await res.json();
-        setReservations(data);
-      }
-    } catch (err) {
-      console.error("Fetch reservations failed");
-    }
+    setView('landing');
   };
 
   useEffect(() => {
-    fetchProducts();
+    if (!isAuthReady) return;
+
+    const qProducts = query(collection(db, 'products'), orderBy('name', 'asc'));
+    const unsubProducts = onSnapshot(qProducts, (snapshot) => {
+      const pList = snapshot.docs.map(doc => ({
+        id: doc.id,
+        ...doc.data()
+      })) as Product[];
+      setProducts(pList);
+      setLoading(false);
+    }, (error) => {
+      handleFirestoreError(error, OperationType.LIST, 'products');
+    });
+
+    let unsubReservations = () => {};
     if (isAdmin) {
-      fetchReservations();
+      const qReservations = query(collection(db, 'reservations'), orderBy('createdAt', 'desc'));
+      unsubReservations = onSnapshot(qReservations, (snapshot) => {
+        const rList = snapshot.docs.map(doc => ({
+          id: doc.id,
+          ...doc.data(),
+          createdAt: doc.data().createdAt?.toDate() || new Date()
+        })) as Reservation[];
+        setReservations(rList);
+      }, (error) => {
+        handleFirestoreError(error, OperationType.LIST, 'reservations');
+      });
     }
-  }, [isAdmin]);
+
+    return () => {
+      unsubProducts();
+      unsubReservations();
+    };
+  }, [isAuthReady, isAdmin]);
 
   const [isLoggingIn, setIsLoggingIn] = useState(false);
 
-  const handleLogin = () => {
-    setShowLoginForm(true);
+  const handleLogin = async () => {
+    if (isLoggingIn) return;
+    setIsLoggingIn(true);
+    try {
+      await signInWithPopup(auth, googleProvider);
+    } catch (error: any) {
+      if (error.code === 'auth/cancelled-popup-request') {
+        console.warn("Login popup was closed or a new request was made.");
+      } else {
+        console.error("Login failed:", error);
+        alert("Login failed. Please try again.");
+      }
+    } finally {
+      setIsLoggingIn(false);
+    }
   };
+
 
   const handleSaveProduct = async (data: Partial<Product>) => {
     try {
-      const url = editingProduct ? `/api/products/${editingProduct._id}` : '/api/products';
-      const method = editingProduct ? 'PUT' : 'POST';
-      const res = await fetch(url, {
-        method,
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify(data)
-      });
-      if (res.ok) {
-        fetchProducts();
-        setShowForm(false);
-        setEditingProduct(undefined);
+      if (editingProduct) {
+        await updateDoc(doc(db, 'products', editingProduct.id), data);
+      } else {
+        await addDoc(collection(db, 'products'), {
+          ...data,
+          createdAt: new Date()
+        });
       }
+      setShowForm(false);
+      setEditingProduct(undefined);
     } catch (error) {
-      console.error("Save product failed");
+      handleFirestoreError(error, editingProduct ? OperationType.UPDATE : OperationType.CREATE, 'products');
     }
   };
 
   const handleDeleteProduct = async (id: string) => {
     if (!window.confirm("Are you sure you want to delete this product?")) return;
     try {
-      const res = await fetch(`/api/products/${id}`, { method: 'DELETE' });
-      if (res.ok) {
-        fetchProducts();
-      }
+      await deleteDoc(doc(db, 'products', id));
     } catch (error) {
-      console.error("Delete product failed");
+      handleFirestoreError(error, OperationType.DELETE, `products/${id}`);
     }
   };
 
@@ -626,60 +601,45 @@ export default function App() {
 
     try {
       for (const p of initialProducts) {
-        await fetch('/api/products', {
-          method: 'POST',
-          headers: { 'Content-Type': 'application/json' },
-          body: JSON.stringify(p)
+        await addDoc(collection(db, 'products'), {
+          ...p,
+          createdAt: new Date()
         });
       }
-      fetchProducts();
       alert('Menu berhasil ditambahkan!');
     } catch (error) {
-      console.error("Seed menu failed");
+      handleFirestoreError(error, OperationType.WRITE, 'products');
     }
   };
 
   const handleSaveReservation = async (data: any) => {
     try {
-      const res = await fetch('/api/reservations', {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify(data)
+      await addDoc(collection(db, 'reservations'), {
+        ...data,
+        status: 'pending',
+        createdAt: new Date()
       });
-      if (res.ok) {
-        alert("Reservasi berhasil dikirim! Kami akan menghubungi Anda segera.");
-        setShowReservationForm(false);
-        if (isAdmin) fetchReservations();
-      }
+      alert("Reservasi berhasil dikirim! Kami akan menghubungi Anda segera.");
+      setShowReservationForm(false);
     } catch (error) {
-      console.error("Save reservation failed");
+      handleFirestoreError(error, OperationType.CREATE, 'reservations');
     }
   };
 
   const handleUpdateReservationStatus = async (id: string, status: string) => {
     try {
-      const res = await fetch(`/api/reservations/${id}`, {
-        method: 'PUT',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ status })
-      });
-      if (res.ok) {
-        fetchReservations();
-      }
+      await updateDoc(doc(db, 'reservations', id), { status });
     } catch (error) {
-      console.error("Update reservation failed");
+      handleFirestoreError(error, OperationType.UPDATE, `reservations/${id}`);
     }
   };
 
   const handleDeleteReservation = async (id: string) => {
     if (!window.confirm("Hapus data reservasi ini?")) return;
     try {
-      const res = await fetch(`/api/reservations/${id}`, { method: 'DELETE' });
-      if (res.ok) {
-        fetchReservations();
-      }
+      await deleteDoc(doc(db, 'reservations', id));
     } catch (error) {
-      console.error("Delete reservation failed");
+      handleFirestoreError(error, OperationType.DELETE, `reservations/${id}`);
     }
   };
 
@@ -718,14 +678,10 @@ export default function App() {
                       </button>
                     )}
                     <div className="hidden sm:block text-right">
-                      <p className="text-sm font-bold text-gray-900">{user.username}</p>
+                      <p className="text-sm font-bold text-gray-900">{user.displayName}</p>
                       <p className="text-xs text-gray-500">{isAdmin ? 'Administrator' : 'Customer'}</p>
                     </div>
-                    <img 
-                      src={user.photoURL || `https://ui-avatars.com/api/?name=${user.username}&background=78350f&color=fff`} 
-                      alt="" 
-                      className="w-10 h-10 rounded-full border-2 border-orange-100" 
-                    />
+                    <img src={user.photoURL || ''} alt="" className="w-10 h-10 rounded-full border-2 border-orange-100" />
                     <button 
                       onClick={handleLogout}
                       className="p-2 text-gray-400 hover:text-red-600 transition-colors"
@@ -913,7 +869,7 @@ export default function App() {
                       <AnimatePresence mode="popLayout">
                         {filteredProducts.map(product => (
                           <ProductCard 
-                            key={product._id} 
+                            key={product.id} 
                             product={product} 
                             isAdmin={isAdmin}
                             onEdit={(p) => {
@@ -1206,7 +1162,7 @@ export default function App() {
                     <AnimatePresence mode="popLayout">
                       {filteredProducts.map(product => (
                         <ProductCard 
-                          key={product._id} 
+                          key={product.id} 
                           product={product} 
                           isAdmin={isAdmin}
                           onEdit={(p) => {
@@ -1236,7 +1192,7 @@ export default function App() {
                     <tbody className="divide-y divide-sky-50">
                       {reservations.length > 0 ? (
                         reservations.map(res => (
-                          <tr key={res._id} className="hover:bg-sky-50/50 transition-colors">
+                          <tr key={res.id} className="hover:bg-sky-50/50 transition-colors">
                             <td className="px-6 py-4">
                               <p className="font-bold text-sky-950">{res.name}</p>
                               <p className="text-xs text-sky-400">{res.phone}</p>
@@ -1253,7 +1209,7 @@ export default function App() {
                             <td className="px-6 py-4">
                               <select 
                                 value={res.status}
-                                onChange={(e) => handleUpdateReservationStatus(res._id, e.target.value)}
+                                onChange={(e) => handleUpdateReservationStatus(res.id, e.target.value)}
                                 className={`text-xs font-bold px-3 py-1 rounded-full border-none focus:ring-2 focus:ring-orange-500 transition-all ${
                                   res.status === 'confirmed' ? 'bg-green-100 text-green-700' :
                                   res.status === 'cancelled' ? 'bg-red-100 text-red-700' :
@@ -1267,7 +1223,7 @@ export default function App() {
                             </td>
                             <td className="px-6 py-4 text-right">
                               <button 
-                                onClick={() => handleDeleteReservation(res._id)}
+                                onClick={() => handleDeleteReservation(res.id)}
                                 className="p-2 text-sky-300 hover:text-red-600 transition-colors"
                               >
                                 <Trash2 className="w-5 h-5" />
@@ -1311,7 +1267,7 @@ export default function App() {
           {showLoginForm && (
             <LoginForm 
               onLogin={(u) => {
-                setUser(u);
+                setCustomUser(u);
                 setShowLoginForm(false);
               }}
               onCancel={() => setShowLoginForm(false)}

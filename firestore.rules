@@ -1,0 +1,89 @@
+rules_version = '2';
+service cloud.firestore {
+  match /databases/{database}/documents {
+    // ===============================================================
+    // Assumed Data Model
+    // ===============================================================
+    //
+    // Collection: products (Menu Items)
+    // Document ID: auto-generated
+    // Fields:
+    //   - name: string (required) - Item name
+    //   - description: string (optional) - Item description
+    //   - price: number (required) - Item price
+    //   - imageUrl: string (optional, URL) - Item image URL
+    //   - category: string (required) - Item category (e.g., Coffee, Pastry)
+    //   - stock: number (optional) - Item availability
+    //   - createdAt: timestamp (optional) - Addition date
+    //
+    // Collection: reservations
+    // Document ID: auto-generated
+    // Fields:
+    //   - name: string (required)
+    //   - email: string (optional)
+    //   - phone: string (required)
+    //   - date: string (required)
+    //   - time: string (required)
+    //   - guests: number (required)
+    //   - status: string (required)
+    //   - createdAt: timestamp (required)
+    //
+    // ===============================================================
+
+    // ===============================================================
+    // Helper Functions
+    // ===============================================================
+    function isAuthenticated() {
+      return request.auth != null;
+    }
+
+    function isAdmin() {
+      return isAuthenticated() &&
+        (get(/databases/$(database)/documents/users/$(request.auth.uid)).data.role == 'admin' ||
+          (request.auth.token.email == "muhammad.adjiprasetyo28@gmail.com" && request.auth.token.email_verified == true));
+    }
+
+    function isValidProduct(data) {
+      return data.keys().hasAll(['name', 'price', 'category']) &&
+             data.name is string && data.name.size() > 0 && data.name.size() < 100 &&
+             data.price is number && data.price >= 0 &&
+             data.category is string && data.category.size() > 0 && data.category.size() < 50 &&
+             (!('description' in data) || (data.description is string && data.description.size() < 1000)) &&
+             (!('imageUrl' in data) || (data.imageUrl is string && data.imageUrl.size() < 500)) &&
+             (!('stock' in data) || (data.stock is number && data.stock >= 0));
+    }
+
+    function isValidReservation(data) {
+      return data.keys().hasAll(['name', 'phone', 'date', 'time', 'guests', 'status', 'createdAt']) &&
+             data.name is string && data.name.size() > 0 && data.name.size() < 100 &&
+             data.phone is string && data.phone.size() > 0 && data.phone.size() < 20 &&
+             data.date is string &&
+             data.time is string &&
+             data.guests is number && data.guests > 0 &&
+             data.status in ['pending', 'confirmed', 'cancelled'] &&
+             data.createdAt is timestamp &&
+             (!('email' in data) || (data.email is string && data.email.size() < 100));
+    }
+
+    // ===============================================================
+    // Rules
+    // ===============================================================
+
+    match /products/{productId} {
+      allow read: if true; // Publicly readable
+      allow create: if isAdmin() && isValidProduct(request.resource.data);
+      allow update: if isAdmin() && isValidProduct(request.resource.data);
+      allow delete: if isAdmin();
+    }
+
+    match /reservations/{reservationId} {
+      allow create: if isValidReservation(request.resource.data);
+      allow read, update, delete: if isAdmin();
+    }
+
+    match /users/{userId} {
+      allow read: if isAuthenticated() && (request.auth.uid == userId || isAdmin());
+      allow write: if isAdmin();
+    }
+  }
+}
