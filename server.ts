@@ -259,18 +259,34 @@ const initializeApp = async () => {
   }
 };
 
+// --- Database Connection ---
+
+let isConnected = false;
+
 const connectToDatabase = async () => {
+  if (isConnected) {
+    console.log("Using existing MongoDB connection");
+    return;
+  }
+
   try {
-    if (!process.env.MONGODB_URI) {
+    const uri = process.env.MONGODB_URI;
+    if (!uri) {
       console.warn("WARNING: MONGODB_URI is not set.");
-    } else if (process.env.MONGODB_URI.includes("<") || process.env.MONGODB_URI.includes(">")) {
-      console.error("ERROR: MONGODB_URI contains '<' or '>'. Please remove these brackets from your connection string in Secrets.");
+      return;
+    } 
+    
+    if (uri.includes("<") || uri.includes(">")) {
+      console.error("ERROR: MONGODB_URI contains '<' or '>'.");
+      return;
     }
     
     console.log("Attempting to connect to MongoDB...");
-    await mongoose.connect(MONGODB_URI, {
+    await mongoose.connect(uri, {
       serverSelectionTimeoutMS: 5000,
     });
+    
+    isConnected = true;
     console.log("Connected to MongoDB successfully");
 
     // Seed admin user
@@ -284,11 +300,48 @@ const connectToDatabase = async () => {
     }
   } catch (err) {
     console.error("MongoDB Connection Error:", err);
+    isConnected = false;
   }
 };
 
-// Initialize app and connect to DB
+// --- Server Start ---
+
+const initializeApp = async () => {
+  // Vite/Static serving logic (Only for local dev or custom server)
+  if (!process.env.VERCEL) {
+    if (process.env.NODE_ENV !== "production") {
+      try {
+        const vite = await createViteServer({
+          server: { middlewareMode: true },
+          appType: "spa",
+        });
+        app.use(vite.middlewares);
+        console.log("Vite middleware initialized");
+      } catch (viteErr) {
+        console.error("Vite Middleware Error:", viteErr);
+      }
+    } else {
+      const distPath = path.join(process.cwd(), "dist");
+      app.use(express.static(distPath));
+      app.get("*", (req, res) => {
+        res.sendFile(path.join(distPath, "index.html"));
+      });
+      console.log("Static serving initialized");
+    }
+
+    app.listen(PORT, "0.0.0.0", () => {
+      console.log(`Server running on http://localhost:${PORT}`);
+    });
+  }
+};
+
+// Initialize app
 initializeApp();
-connectToDatabase();
+
+// Middleware to ensure DB connection for API routes
+app.use("/api", async (req, res, next) => {
+  await connectToDatabase();
+  next();
+});
 
 export default app;
