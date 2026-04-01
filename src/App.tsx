@@ -9,14 +9,20 @@ import {
   db, 
   googleProvider, 
   signInWithPopup, 
+  signInWithEmailAndPassword,
   signOut, 
   onAuthStateChanged, 
+  updateEmail,
+  updatePassword,
+  reauthenticateWithCredential,
+  EmailAuthProvider,
   collection, 
   onSnapshot, 
   addDoc, 
   updateDoc, 
   deleteDoc, 
   doc, 
+  getDoc,
   setDoc,
   query, 
   orderBy, 
@@ -25,7 +31,7 @@ import {
   User,
   serverTimestamp
 } from './firebase';
-import { LogIn, LogOut, Plus, Trash2, Edit2, Coffee, Search, Filter, ShoppingCart, Star, Utensils, MapPin, Clock, Phone, Instagram, MessageSquare, Mail } from 'lucide-react';
+import { LogIn, LogOut, Plus, Trash2, Edit2, Coffee, Search, Filter, ShoppingCart, Star, Utensils, MapPin, Clock, Phone, Instagram, MessageSquare, Mail, Settings, Lock, User as UserIcon } from 'lucide-react';
 import { motion, AnimatePresence } from 'motion/react';
 
 // --- Types ---
@@ -380,11 +386,20 @@ const ReservationForm = ({ onSave, onCancel }: {
   );
 };
 
-const LoginForm = ({ onGoogleLogin, onCancel, isLoggingIn }: { 
+const LoginForm = ({ onLogin, onGoogleLogin, onCancel, isLoggingIn }: { 
+  onLogin: (email: string, pass: string) => void,
   onGoogleLogin: () => void,
   onCancel: () => void,
   isLoggingIn: boolean
 }) => {
+  const [email, setEmail] = useState('');
+  const [password, setPassword] = useState('');
+
+  const handleSubmit = (e: React.FormEvent) => {
+    e.preventDefault();
+    onLogin(email, password);
+  };
+
   return (
     <motion.div 
       initial={{ opacity: 0 }}
@@ -399,17 +414,54 @@ const LoginForm = ({ onGoogleLogin, onCancel, isLoggingIn }: {
         <div className="p-8">
           <h2 className="text-2xl font-bold text-sky-950 mb-6 text-center">Sign In Admin</h2>
           
-          <p className="text-sm text-gray-500 mb-8 text-center">
-            Gunakan akun Google Anda untuk masuk ke dashboard admin Klopp #TempatBercerita.
-          </p>
+          <form onSubmit={handleSubmit} className="space-y-4 mb-6">
+            <div>
+              <label className="block text-xs font-bold text-sky-400 uppercase tracking-widest mb-1">Username / Email</label>
+              <input 
+                type="email" 
+                value={email}
+                onChange={e => setEmail(e.target.value)}
+                required
+                className="w-full px-4 py-3 bg-sky-50 border-none rounded-xl focus:ring-2 focus:ring-orange-500 transition-all"
+                placeholder="admin@example.com"
+              />
+            </div>
+            <div>
+              <label className="block text-xs font-bold text-sky-400 uppercase tracking-widest mb-1">Password</label>
+              <input 
+                type="password" 
+                value={password}
+                onChange={e => setPassword(e.target.value)}
+                required
+                className="w-full px-4 py-3 bg-sky-50 border-none rounded-xl focus:ring-2 focus:ring-orange-500 transition-all"
+                placeholder="••••••••"
+              />
+            </div>
+            <button 
+              type="submit"
+              disabled={isLoggingIn}
+              className="w-full py-4 bg-orange-600 text-white font-bold rounded-2xl hover:bg-orange-700 transition-all shadow-lg shadow-orange-200 disabled:opacity-50"
+            >
+              {isLoggingIn ? 'Logging in...' : 'Sign In'}
+            </button>
+          </form>
+
+          <div className="relative mb-6">
+            <div className="absolute inset-0 flex items-center">
+              <div className="w-full border-t border-gray-100"></div>
+            </div>
+            <div className="relative flex justify-center text-xs uppercase">
+              <span className="bg-white px-2 text-gray-400">Atau masuk dengan</span>
+            </div>
+          </div>
 
           <button 
             onClick={onGoogleLogin}
             disabled={isLoggingIn}
-            className="w-full mb-6 py-4 px-4 bg-white border-2 border-gray-100 rounded-2xl flex items-center justify-center gap-3 hover:bg-gray-50 hover:border-orange-200 transition-all font-bold text-gray-700 shadow-sm group"
+            className="w-full mb-4 py-4 px-4 bg-white border-2 border-gray-100 rounded-2xl flex items-center justify-center gap-3 hover:bg-gray-50 hover:border-orange-200 transition-all font-bold text-gray-700 shadow-sm group"
           >
             <img src="https://www.gstatic.com/firebasejs/ui/2.0.0/images/auth/google.svg" alt="Google" className="w-6 h-6 group-hover:scale-110 transition-transform" />
-            {isLoggingIn ? 'Connecting...' : 'Sign In with Google'}
+            Sign In with Google
           </button>
 
           <button 
@@ -422,6 +474,141 @@ const LoginForm = ({ onGoogleLogin, onCancel, isLoggingIn }: {
         </div>
       </motion.div>
     </motion.div>
+  );
+};
+
+const SettingsView = ({ user, setStatusMessage }: { user: User, setStatusMessage: (msg: { type: 'success' | 'error', text: string } | null) => void }) => {
+  const [newEmail, setNewEmail] = useState(user.email || '');
+  const [newPassword, setNewPassword] = useState('');
+  const [currentPassword, setCurrentPassword] = useState('');
+  const [isUpdating, setIsUpdating] = useState(false);
+  const [showReauth, setShowReauth] = useState(false);
+
+  const handleUpdateAccount = async (e: React.FormEvent) => {
+    e.preventDefault();
+    if (isUpdating) return;
+    setIsUpdating(true);
+
+    try {
+      // Re-authenticate if using email/password
+      if (user.providerData.some(p => p.providerId === 'password')) {
+        const credential = EmailAuthProvider.credential(user.email!, currentPassword);
+        await reauthenticateWithCredential(user, credential);
+      }
+
+      if (newEmail !== user.email) {
+        await updateEmail(user, newEmail);
+      }
+
+      if (newPassword) {
+        await updatePassword(user, newPassword);
+      }
+
+      setStatusMessage({ type: 'success', text: 'Akun berhasil diperbarui!' });
+      setCurrentPassword('');
+      setNewPassword('');
+      setShowReauth(false);
+    } catch (error: any) {
+      console.error("Update failed:", error);
+      if (error.code === 'auth/requires-recent-login') {
+        setShowReauth(true);
+        setStatusMessage({ type: 'error', text: 'Sesi anda telah berakhir. Silakan masukkan password saat ini untuk verifikasi.' });
+      } else {
+        setStatusMessage({ type: 'error', text: `Gagal memperbarui akun: ${error.message}` });
+      }
+    } finally {
+      setIsUpdating(false);
+    }
+  };
+
+  return (
+    <div className="max-w-2xl mx-auto">
+      <motion.div 
+        initial={{ y: 20, opacity: 0 }}
+        animate={{ y: 0, opacity: 1 }}
+        className="bg-white rounded-3xl shadow-sm border border-sky-100 p-8"
+      >
+        <div className="flex items-center gap-4 mb-8">
+          <div className="p-3 bg-orange-100 rounded-2xl text-orange-600">
+            <Settings className="w-6 h-6" />
+          </div>
+          <div>
+            <h2 className="text-2xl font-bold text-sky-950">Pengaturan Akun Admin</h2>
+            <p className="text-sky-400 text-sm">Ubah kredensial login Anda</p>
+          </div>
+        </div>
+
+        <form onSubmit={handleUpdateAccount} className="space-y-6">
+          <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
+            <div>
+              <label className="block text-xs font-bold text-sky-400 uppercase tracking-widest mb-2 flex items-center gap-2">
+                <UserIcon className="w-3 h-3" /> Username / Email Baru
+              </label>
+              <input 
+                type="email" 
+                value={newEmail}
+                onChange={e => setNewEmail(e.target.value)}
+                className="w-full px-4 py-3 bg-sky-50 border-none rounded-xl focus:ring-2 focus:ring-orange-500 transition-all"
+                placeholder="admin@example.com"
+              />
+            </div>
+            <div>
+              <label className="block text-xs font-bold text-sky-400 uppercase tracking-widest mb-2 flex items-center gap-2">
+                <Lock className="w-3 h-3" /> Password Baru
+              </label>
+              <input 
+                type="password" 
+                value={newPassword}
+                onChange={e => setNewPassword(e.target.value)}
+                className="w-full px-4 py-3 bg-sky-50 border-none rounded-xl focus:ring-2 focus:ring-orange-500 transition-all"
+                placeholder="Isi jika ingin mengubah"
+              />
+            </div>
+          </div>
+
+          {(showReauth || user.providerData.some(p => p.providerId === 'password')) && (
+            <div className="pt-4 border-t border-sky-50">
+              <label className="block text-xs font-bold text-orange-600 uppercase tracking-widest mb-2">
+                Konfirmasi Password Saat Ini
+              </label>
+              <input 
+                type="password" 
+                value={currentPassword}
+                onChange={e => setCurrentPassword(e.target.value)}
+                required
+                className="w-full px-4 py-3 bg-orange-50 border-none rounded-xl focus:ring-2 focus:ring-orange-500 transition-all"
+                placeholder="Masukkan password saat ini untuk verifikasi"
+              />
+              <p className="text-[10px] text-sky-400 mt-2 italic">
+                * Diperlukan untuk mengubah email atau password demi keamanan.
+              </p>
+            </div>
+          )}
+
+          <button 
+            type="submit"
+            disabled={isUpdating}
+            className="w-full py-4 bg-orange-600 text-white font-bold rounded-2xl hover:bg-orange-700 transition-all shadow-lg shadow-orange-200 disabled:opacity-50 flex items-center justify-center gap-2"
+          >
+            {isUpdating ? 'Memproses...' : 'Simpan Perubahan'}
+          </button>
+        </form>
+
+        <div className="mt-8 p-4 bg-sky-50 rounded-2xl border border-sky-100">
+          <h4 className="text-xs font-bold text-sky-700 uppercase mb-2">Informasi Akun</h4>
+          <div className="space-y-1">
+            <p className="text-sm text-sky-600 flex justify-between">
+              <span>Metode Login:</span>
+              <span className="font-bold text-sky-950 uppercase">{user.providerData[0]?.providerId || 'Unknown'}</span>
+            </p>
+            <p className="text-sm text-sky-600 flex justify-between">
+              <span>UID:</span>
+              <span className="font-mono text-[10px] text-sky-400">{user.uid}</span>
+            </p>
+          </div>
+        </div>
+      </motion.div>
+    </div>
   );
 };
 
@@ -442,12 +629,13 @@ export default function App() {
   const [searchTerm, setSearchTerm] = useState('');
   const [selectedCategory, setSelectedCategory] = useState('All');
   const [view, setView] = useState<'landing' | 'admin'>('landing');
-  const [adminTab, setAdminTab] = useState<'products' | 'reservations'>('products');
+  const [adminTab, setAdminTab] = useState<'products' | 'reservations' | 'settings'>('products');
+
+  const [userRole, setUserRole] = useState<string | null>(null);
 
   const isAdmin = useMemo(() => {
-    // Only Google Login with the owner email can access the Admin Dashboard UI
-    return user?.email === "muhammad.adjiprasetyo28@gmail.com";
-  }, [user]);
+    return userRole === 'admin' || user?.email === "muhammad.adjiprasetyo28@gmail.com";
+  }, [userRole, user]);
 
   useEffect(() => {
     if (isAdmin) {
@@ -461,20 +649,35 @@ export default function App() {
     const unsubscribe = onAuthStateChanged(auth, async (u) => {
       setFirebaseUser(u);
       if (u) {
-        // Sync user document to Firestore
         try {
           const userRef = doc(db, 'users', u.uid);
+          const userDoc = await getDoc(userRef);
+          
+          let role = null;
+          if (userDoc.exists()) {
+            role = userDoc.data().role || null;
+          }
+          
+          // Initial bootstrap for the owner email
+          if (!role && u.email === "muhammad.adjiprasetyo28@gmail.com") {
+            role = 'admin';
+          }
+          
+          setUserRole(role);
+
+          // Sync user document to Firestore
           await setDoc(userRef, {
             displayName: u.displayName,
             email: u.email,
             photoURL: u.photoURL,
             lastLogin: serverTimestamp(),
-            // If it's the owner email, ensure they have admin role in their doc too
-            ...(u.email === "muhammad.adjiprasetyo28@gmail.com" ? { role: 'admin' } : {})
+            role: role
           }, { merge: true });
         } catch (error) {
           console.error("Error syncing user document:", error);
         }
+      } else {
+        setUserRole(null);
       }
       setIsAuthReady(true);
     });
@@ -542,6 +745,26 @@ export default function App() {
         console.error("Login failed:", error);
         setStatusMessage({ type: 'error', text: "Login gagal. Silakan coba lagi." });
       }
+    } finally {
+      setIsLoggingIn(false);
+    }
+  };
+
+  const handleEmailLogin = async (email: string, pass: string) => {
+    if (isLoggingIn) return;
+    setIsLoggingIn(true);
+    try {
+      await signInWithEmailAndPassword(auth, email, pass);
+      setShowLoginForm(false);
+    } catch (error: any) {
+      console.error("Login failed:", error);
+      let message = "Login gagal. Silakan periksa username/password Anda.";
+      if (error.code === 'auth/user-not-found' || error.code === 'auth/wrong-password') {
+        message = "Username atau password salah.";
+      } else if (error.code === 'auth/invalid-email') {
+        message = "Format email tidak valid.";
+      }
+      setStatusMessage({ type: 'error', text: message });
     } finally {
       setIsLoggingIn(false);
     }
@@ -1143,6 +1366,12 @@ export default function App() {
                 >
                   Data Reservasi
                 </button>
+                <button 
+                  onClick={() => setAdminTab('settings')}
+                  className={`px-6 py-3 rounded-2xl font-bold transition-all ${adminTab === 'settings' ? 'bg-orange-600 text-white shadow-lg shadow-orange-200' : 'bg-white text-sky-700 hover:bg-sky-50 border border-sky-100'}`}
+                >
+                  Pengaturan Akun
+                </button>
               </div>
             </div>
 
@@ -1211,7 +1440,7 @@ export default function App() {
                   </div>
                 )}
               </>
-            ) : (
+            ) : adminTab === 'reservations' ? (
               <div className="bg-white rounded-3xl shadow-sm border border-sky-100 overflow-hidden">
                 <div className="overflow-x-auto">
                   <table className="w-full text-left">
@@ -1277,6 +1506,8 @@ export default function App() {
                   </table>
                 </div>
               </div>
+            ) : (
+              <SettingsView user={user!} setStatusMessage={setStatusMessage} />
             )}
           </div>
         )}
@@ -1301,6 +1532,7 @@ export default function App() {
           )}
           {showLoginForm && (
             <LoginForm 
+              onLogin={handleEmailLogin}
               onGoogleLogin={handleLogin}
               isLoggingIn={isLoggingIn}
               onCancel={() => setShowLoginForm(false)}
