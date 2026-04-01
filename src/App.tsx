@@ -475,7 +475,7 @@ export default function App() {
   const [adminTab, setAdminTab] = useState<'products' | 'reservations'>('products');
 
   const isAdmin = useMemo(() => {
-    return user?.email === "muhammad.adjiprasetyo28@gmail.com" || user?.email === "admin@klopp.cafe";
+    return user?.email === "adjiprasetyo4@gmail.com" || user?.email === "admin@klopp.cafe";
   }, [user]);
 
   useEffect(() => {
