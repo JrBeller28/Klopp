@@ -1,0 +1,243 @@
+import express from "express";
+import { createServer as createViteServer } from "vite";
+import mongoose from "mongoose";
+import dotenv from "dotenv";
+import path from "path";
+import cors from "cors";
+import cookieParser from "cookie-parser";
+import jwt from "jsonwebtoken";
+import bcrypt from "bcryptjs";
+
+dotenv.config();
+
+mongoose.set('bufferCommands', false);
+
+const app = express();
+const PORT = 3000;
+const MONGODB_URI = process.env.MONGODB_URI || "mongodb://localhost:27017/klopp";
+const JWT_SECRET = process.env.JWT_SECRET || "klopp-secret-key";
+
+// --- Database Models ---
+
+const userSchema = new mongoose.Schema({
+  email: { type: String, required: true, unique: true },
+  password: { type: String, required: true },
+  role: { type: String, default: "admin" },
+});
+
+const productSchema = new mongoose.Schema({
+  name: { type: String, required: true },
+  price: { type: Number, required: true },
+  category: { type: String, required: true },
+  description: { type: String },
+  imageUrl: { type: String },
+  createdAt: { type: Date, default: Date.now },
+});
+
+const reservationSchema = new mongoose.Schema({
+  name: { type: String, required: true },
+  phone: { type: String, required: true },
+  date: { type: String, required: true },
+  time: { type: String, required: true },
+  guests: { type: Number, required: true },
+  status: { type: String, default: "pending" },
+  createdAt: { type: Date, default: Date.now },
+});
+
+const User = mongoose.model("User", userSchema);
+const Product = mongoose.model("Product", productSchema);
+const Reservation = mongoose.model("Reservation", reservationSchema);
+
+// --- Middleware ---
+
+app.use(express.json());
+app.use(cookieParser());
+app.use(cors({
+  origin: true,
+  credentials: true
+}));
+
+const authenticate = async (req: any, res: any, next: any) => {
+  const token = req.cookies.token;
+  if (!token) return res.status(401).json({ message: "Unauthorized" });
+
+  try {
+    const decoded: any = jwt.verify(token, JWT_SECRET);
+    req.user = await User.findById(decoded.id);
+    if (!req.user) return res.status(401).json({ message: "Unauthorized" });
+    next();
+  } catch (err) {
+    res.status(401).json({ message: "Unauthorized" });
+  }
+};
+
+// --- API Routes ---
+
+// Auth
+app.post("/api/auth/login", async (req, res) => {
+  const { email, password } = req.body;
+  try {
+    const user = await User.findOne({ email });
+    if (!user) return res.status(401).json({ message: "Invalid credentials" });
+
+    const isMatch = await bcrypt.compare(password, user.password);
+    if (!isMatch) return res.status(401).json({ message: "Invalid credentials" });
+
+    const token = jwt.sign({ id: user._id }, JWT_SECRET, { expiresIn: "1d" });
+    res.cookie("token", token, {
+      httpOnly: true,
+      secure: true,
+      sameSite: "none",
+      maxAge: 24 * 60 * 60 * 1000
+    });
+    res.json({ user: { email: user.email, role: user.role } });
+  } catch (err) {
+    res.status(500).json({ message: "Server error" });
+  }
+});
+
+app.post("/api/auth/logout", (req, res) => {
+  res.clearCookie("token", {
+    httpOnly: true,
+    secure: true,
+    sameSite: "none"
+  });
+  res.json({ message: "Logged out" });
+});
+
+app.get("/api/auth/me", authenticate, (req: any, res) => {
+  res.json({ user: { email: req.user.email, role: req.user.role } });
+});
+
+// Products
+app.get("/api/products", async (req, res) => {
+  try {
+    const products = await Product.find().sort({ name: 1 });
+    res.json(products);
+  } catch (err) {
+    res.status(500).json({ message: "Server error" });
+  }
+});
+
+app.post("/api/products", authenticate, async (req, res) => {
+  try {
+    const product = new Product(req.body);
+    await product.save();
+    res.json(product);
+  } catch (err) {
+    res.status(500).json({ message: "Server error" });
+  }
+});
+
+app.put("/api/products/:id", authenticate, async (req, res) => {
+  try {
+    const product = await Product.findByIdAndUpdate(req.params.id, req.body, { new: true });
+    res.json(product);
+  } catch (err) {
+    res.status(500).json({ message: "Server error" });
+  }
+});
+
+app.delete("/api/products/:id", authenticate, async (req, res) => {
+  try {
+    await Product.findByIdAndDelete(req.params.id);
+    res.json({ message: "Product deleted" });
+  } catch (err) {
+    res.status(500).json({ message: "Server error" });
+  }
+});
+
+// Reservations
+app.get("/api/reservations", authenticate, async (req, res) => {
+  try {
+    const reservations = await Reservation.find().sort({ createdAt: -1 });
+    res.json(reservations);
+  } catch (err) {
+    res.status(500).json({ message: "Server error" });
+  }
+});
+
+app.post("/api/reservations", async (req, res) => {
+  try {
+    const reservation = new Reservation(req.body);
+    await reservation.save();
+    res.json(reservation);
+  } catch (err) {
+    res.status(500).json({ message: "Server error" });
+  }
+});
+
+app.put("/api/reservations/:id", authenticate, async (req, res) => {
+  try {
+    const reservation = await Reservation.findByIdAndUpdate(req.params.id, req.body, { new: true });
+    res.json(reservation);
+  } catch (err) {
+    res.status(500).json({ message: "Server error" });
+  }
+});
+
+app.delete("/api/reservations/:id", authenticate, async (req, res) => {
+  try {
+    await Reservation.findByIdAndDelete(req.params.id);
+    res.json({ message: "Reservation deleted" });
+  } catch (err) {
+    res.status(500).json({ message: "Server error" });
+  }
+});
+
+// --- Server Start ---
+
+async function startServer() {
+  // Start listening immediately so the frontend can at least connect to the server
+  const server = app.listen(PORT, "0.0.0.0", () => {
+    console.log(`Server running on http://localhost:${PORT}`);
+  });
+
+  try {
+    if (!process.env.MONGODB_URI) {
+      console.warn("WARNING: MONGODB_URI is not set. Using local fallback.");
+    }
+    
+    console.log("Attempting to connect to MongoDB...");
+    await mongoose.connect(MONGODB_URI, {
+      serverSelectionTimeoutMS: 5000, // Fail after 5 seconds if not connected
+    });
+    console.log("Connected to MongoDB successfully");
+
+    // Seed admin user if not exists
+    const adminEmail = process.env.ADMIN_EMAIL || "muhammad.adjiprasetyo28@gmail.com";
+    const adminPassword = process.env.ADMIN_PASSWORD || "admin123";
+    const adminExists = await User.findOne({ email: adminEmail });
+    if (!adminExists) {
+      const hashedPassword = await bcrypt.hash(adminPassword, 10);
+      await User.create({ email: adminEmail, password: hashedPassword });
+      console.log("Admin user created");
+    }
+
+    if (process.env.NODE_ENV !== "production") {
+      const vite = await createViteServer({
+        server: { middlewareMode: true },
+        appType: "spa",
+      });
+      app.use(vite.middlewares);
+    } else {
+      const distPath = path.join(process.cwd(), "dist");
+      app.use(express.static(distPath));
+      app.get("*", (req, res) => {
+        res.sendFile(path.join(distPath, "index.html"));
+      });
+    }
+  } catch (err) {
+    console.error("MongoDB Connection Error:", err);
+    // Even if DB fails, we still want to serve the frontend (Vite)
+    if (process.env.NODE_ENV !== "production") {
+      const vite = await createViteServer({
+        server: { middlewareMode: true },
+        appType: "spa",
+      });
+      app.use(vite.middlewares);
+    }
+  }
+}
+
+startServer();

@@ -4,31 +4,12 @@
  */
 
 import React, { useState, useEffect, useMemo, Component } from 'react';
-import { 
-  auth, 
-  db, 
-  googleProvider, 
-  signInWithPopup, 
-  signOut, 
-  onAuthStateChanged, 
-  collection, 
-  onSnapshot, 
-  addDoc, 
-  updateDoc, 
-  deleteDoc, 
-  doc, 
-  query, 
-  orderBy, 
-  handleFirestoreError, 
-  OperationType,
-  User
-} from './firebase';
 import { LogIn, LogOut, Plus, Trash2, Edit2, Coffee, Search, Filter, ShoppingCart, Star, Utensils, MapPin, Clock, Phone, Instagram, MessageSquare, Mail } from 'lucide-react';
 import { motion, AnimatePresence } from 'motion/react';
 
 // --- Types ---
 interface Product {
-  id: string;
+  _id: string;
   name: string;
   description?: string;
   price: number;
@@ -39,7 +20,7 @@ interface Product {
 }
 
 interface Reservation {
-  id: string;
+  _id: string;
   name: string;
   email?: string;
   phone: string;
@@ -144,7 +125,7 @@ const ProductCard = ({ product, isAdmin, onEdit, onDelete }: {
         <h3 className="text-lg font-bold text-gray-900 mb-1 line-clamp-1">{product.name}</h3>
         <p className="text-sm text-gray-500 mb-4 line-clamp-2 h-10">{product.description || "No description provided."}</p>
         <div className="flex items-center justify-between">
-          <span className="text-xl font-black text-gray-900">${product.price.toLocaleString()}</span>
+          <span className="text-xl font-black text-gray-900">Rp {product.price.toLocaleString()}</span>
           <button className="p-2 bg-orange-600 text-white rounded-full hover:bg-orange-700 transition-colors">
             <ShoppingCart className="w-5 h-5" />
           </button>
@@ -160,7 +141,7 @@ const ProductCard = ({ product, isAdmin, onEdit, onDelete }: {
             <Edit2 className="w-4 h-4" />
           </button>
           <button 
-            onClick={() => onDelete(product.id)}
+            onClick={() => onDelete(product._id)}
             className="p-2 bg-white/90 backdrop-blur shadow-sm rounded-full text-red-600 hover:bg-red-600 hover:text-white transition-all"
           >
             <Trash2 className="w-4 h-4" />
@@ -382,16 +363,31 @@ const LoginForm = ({ onLogin, onCancel }: {
   onLogin: (user: any) => void, 
   onCancel: () => void 
 }) => {
-  const [username, setUsername] = useState('');
+  const [email, setEmail] = useState('');
   const [password, setPassword] = useState('');
   const [error, setError] = useState('');
+  const [loading, setLoading] = useState(false);
 
-  const handleSubmit = (e: React.FormEvent) => {
+  const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
-    if (username === 'admin' && password === 'adminklopp') {
-      onLogin({ displayName: 'Admin Klopp', email: 'admin@klopp.cafe', photoURL: 'https://ui-avatars.com/api/?name=Admin+Klopp&background=78350f&color=fff' });
-    } else {
-      setError('Username atau password salah.');
+    setLoading(true);
+    setError('');
+    try {
+      const res = await fetch('/api/auth/login', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ email, password })
+      });
+      const data = await res.json();
+      if (res.ok) {
+        onLogin(data.user);
+      } else {
+        setError(data.message || 'Login gagal.');
+      }
+    } catch (err) {
+      setError('Terjadi kesalahan koneksi.');
+    } finally {
+      setLoading(false);
     }
   };
 
@@ -410,14 +406,14 @@ const LoginForm = ({ onLogin, onCancel }: {
           <h2 className="text-2xl font-bold text-sky-950 mb-6 text-center">Sign In Admin</h2>
           <form onSubmit={handleSubmit} className="space-y-4">
             <div>
-              <label className="block text-xs font-bold text-sky-400 uppercase tracking-widest mb-1">Username</label>
+              <label className="block text-xs font-bold text-sky-400 uppercase tracking-widest mb-1">Email</label>
               <input 
-                type="text" 
+                type="email" 
                 required
-                value={username} 
-                onChange={e => setUsername(e.target.value)}
+                value={email} 
+                onChange={e => setEmail(e.target.value)}
                 className="w-full px-4 py-3 bg-sky-50 border-none rounded-xl focus:ring-2 focus:ring-orange-500 transition-all outline-none"
-                placeholder="admin"
+                placeholder="admin@klopp.cafe"
               />
             </div>
             <div>
@@ -435,9 +431,10 @@ const LoginForm = ({ onLogin, onCancel }: {
             <div className="flex gap-3 mt-8">
               <button 
                 type="submit"
-                className="flex-1 py-4 bg-orange-600 text-white font-bold rounded-2xl hover:bg-orange-700 transition-all shadow-lg shadow-orange-200"
+                disabled={loading}
+                className="flex-1 py-4 bg-orange-600 text-white font-bold rounded-2xl hover:bg-orange-700 transition-all shadow-lg shadow-orange-200 disabled:opacity-50"
               >
-                Sign In
+                {loading ? 'Signing In...' : 'Sign In'}
               </button>
               <button 
                 type="button"
@@ -457,10 +454,7 @@ const LoginForm = ({ onLogin, onCancel }: {
 // --- Main App ---
 
 export default function App() {
-  const [firebaseUser, setFirebaseUser] = useState<User | null>(null);
-  const [customUser, setCustomUser] = useState<any>(null);
-  const user = firebaseUser || customUser;
-  
+  const [user, setUser] = useState<any>(null);
   const [products, setProducts] = useState<Product[]>([]);
   const [reservations, setReservations] = useState<Reservation[]>([]);
   const [loading, setLoading] = useState(true);
@@ -475,7 +469,7 @@ export default function App() {
   const [adminTab, setAdminTab] = useState<'products' | 'reservations'>('products');
 
   const isAdmin = useMemo(() => {
-    return user?.email === "muhammad.adjiprasetyo28@gmail.com" || user?.email === "admin@klopp.cafe";
+    return user?.role === 'admin';
   }, [user]);
 
   useEffect(() => {
@@ -487,105 +481,99 @@ export default function App() {
   }, [isAdmin]);
 
   useEffect(() => {
-    const unsubscribe = onAuthStateChanged(auth, (u) => {
-      setFirebaseUser(u);
-      setIsAuthReady(true);
-    });
-    return () => unsubscribe();
+    const checkAuth = async () => {
+      try {
+        const res = await fetch('/api/auth/me');
+        if (res.ok) {
+          const data = await res.json();
+          setUser(data.user);
+        }
+      } catch (err) {
+        console.error("Auth check failed");
+      } finally {
+        setIsAuthReady(true);
+      }
+    };
+    checkAuth();
   }, []);
 
   const handleLogout = async () => {
-    if (customUser) {
-      setCustomUser(null);
-    } else {
-      try {
-        await signOut(auth);
-      } catch (error) {
-        console.error("Logout failed:", error);
-      }
+    try {
+      await fetch('/api/auth/logout', { method: 'POST' });
+      setUser(null);
+      setView('landing');
+    } catch (error) {
+      console.error("Logout failed:", error);
     }
-    setView('landing');
+  };
+
+  const fetchProducts = async () => {
+    try {
+      const res = await fetch('/api/products');
+      if (res.ok) {
+        const data = await res.json();
+        setProducts(data);
+      }
+    } catch (err) {
+      console.error("Fetch products failed");
+    } finally {
+      setLoading(false);
+    }
+  };
+
+  const fetchReservations = async () => {
+    try {
+      const res = await fetch('/api/reservations');
+      if (res.ok) {
+        const data = await res.json();
+        setReservations(data);
+      }
+    } catch (err) {
+      console.error("Fetch reservations failed");
+    }
   };
 
   useEffect(() => {
-    if (!isAuthReady) return;
-
-    const qProducts = query(collection(db, 'products'), orderBy('name', 'asc'));
-    const unsubProducts = onSnapshot(qProducts, (snapshot) => {
-      const pList = snapshot.docs.map(doc => ({
-        id: doc.id,
-        ...doc.data()
-      })) as Product[];
-      setProducts(pList);
-      setLoading(false);
-    }, (error) => {
-      handleFirestoreError(error, OperationType.LIST, 'products');
-    });
-
-    let unsubReservations = () => {};
+    fetchProducts();
     if (isAdmin) {
-      const qReservations = query(collection(db, 'reservations'), orderBy('createdAt', 'desc'));
-      unsubReservations = onSnapshot(qReservations, (snapshot) => {
-        const rList = snapshot.docs.map(doc => ({
-          id: doc.id,
-          ...doc.data(),
-          createdAt: doc.data().createdAt?.toDate() || new Date()
-        })) as Reservation[];
-        setReservations(rList);
-      }, (error) => {
-        handleFirestoreError(error, OperationType.LIST, 'reservations');
-      });
+      fetchReservations();
     }
-
-    return () => {
-      unsubProducts();
-      unsubReservations();
-    };
-  }, [isAuthReady, isAdmin]);
+  }, [isAdmin]);
 
   const [isLoggingIn, setIsLoggingIn] = useState(false);
 
-  const handleLogin = async () => {
-    if (isLoggingIn) return;
-    setIsLoggingIn(true);
-    try {
-      await signInWithPopup(auth, googleProvider);
-    } catch (error: any) {
-      if (error.code === 'auth/cancelled-popup-request') {
-        console.warn("Login popup was closed or a new request was made.");
-      } else {
-        console.error("Login failed:", error);
-        alert("Login failed. Please try again.");
-      }
-    } finally {
-      setIsLoggingIn(false);
-    }
+  const handleLogin = () => {
+    setShowLoginForm(true);
   };
-
 
   const handleSaveProduct = async (data: Partial<Product>) => {
     try {
-      if (editingProduct) {
-        await updateDoc(doc(db, 'products', editingProduct.id), data);
-      } else {
-        await addDoc(collection(db, 'products'), {
-          ...data,
-          createdAt: new Date()
-        });
+      const url = editingProduct ? `/api/products/${editingProduct._id}` : '/api/products';
+      const method = editingProduct ? 'PUT' : 'POST';
+      const res = await fetch(url, {
+        method,
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify(data)
+      });
+      if (res.ok) {
+        fetchProducts();
+        setShowForm(false);
+        setEditingProduct(undefined);
       }
-      setShowForm(false);
-      setEditingProduct(undefined);
     } catch (error) {
-      handleFirestoreError(error, editingProduct ? OperationType.UPDATE : OperationType.CREATE, 'products');
+      console.error("Save product failed");
     }
   };
 
   const handleDeleteProduct = async (id: string) => {
     if (!window.confirm("Are you sure you want to delete this product?")) return;
     try {
-      await deleteDoc(doc(db, 'products', id));
+      const res = await fetch(`/api/products/${id}`, { method: 'DELETE' });
+      if (res.ok) {
+        fetchProducts();
+      }
     } catch (error) {
-      handleFirestoreError(error, OperationType.DELETE, `products/${id}`);
+      console.error("Delete product failed");
     }
   };
 
@@ -601,45 +589,60 @@ export default function App() {
 
     try {
       for (const p of initialProducts) {
-        await addDoc(collection(db, 'products'), {
-          ...p,
-          createdAt: new Date()
+        await fetch('/api/products', {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify(p)
         });
       }
+      fetchProducts();
       alert('Menu berhasil ditambahkan!');
     } catch (error) {
-      handleFirestoreError(error, OperationType.WRITE, 'products');
+      console.error("Seed menu failed");
     }
   };
 
   const handleSaveReservation = async (data: any) => {
     try {
-      await addDoc(collection(db, 'reservations'), {
-        ...data,
-        status: 'pending',
-        createdAt: new Date()
+      const res = await fetch('/api/reservations', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify(data)
       });
-      alert("Reservasi berhasil dikirim! Kami akan menghubungi Anda segera.");
-      setShowReservationForm(false);
+      if (res.ok) {
+        alert("Reservasi berhasil dikirim! Kami akan menghubungi Anda segera.");
+        setShowReservationForm(false);
+        if (isAdmin) fetchReservations();
+      }
     } catch (error) {
-      handleFirestoreError(error, OperationType.CREATE, 'reservations');
+      console.error("Save reservation failed");
     }
   };
 
   const handleUpdateReservationStatus = async (id: string, status: string) => {
     try {
-      await updateDoc(doc(db, 'reservations', id), { status });
+      const res = await fetch(`/api/reservations/${id}`, {
+        method: 'PUT',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ status })
+      });
+      if (res.ok) {
+        fetchReservations();
+      }
     } catch (error) {
-      handleFirestoreError(error, OperationType.UPDATE, `reservations/${id}`);
+      console.error("Update reservation failed");
     }
   };
 
   const handleDeleteReservation = async (id: string) => {
     if (!window.confirm("Hapus data reservasi ini?")) return;
     try {
-      await deleteDoc(doc(db, 'reservations', id));
+      const res = await fetch(`/api/reservations/${id}`, { method: 'DELETE' });
+      if (res.ok) {
+        fetchReservations();
+      }
     } catch (error) {
-      handleFirestoreError(error, OperationType.DELETE, `reservations/${id}`);
+      console.error("Delete reservation failed");
     }
   };
 
@@ -869,7 +872,7 @@ export default function App() {
                       <AnimatePresence mode="popLayout">
                         {filteredProducts.map(product => (
                           <ProductCard 
-                            key={product.id} 
+                            key={product._id} 
                             product={product} 
                             isAdmin={isAdmin}
                             onEdit={(p) => {
@@ -1162,7 +1165,7 @@ export default function App() {
                     <AnimatePresence mode="popLayout">
                       {filteredProducts.map(product => (
                         <ProductCard 
-                          key={product.id} 
+                          key={product._id} 
                           product={product} 
                           isAdmin={isAdmin}
                           onEdit={(p) => {
@@ -1192,7 +1195,7 @@ export default function App() {
                     <tbody className="divide-y divide-sky-50">
                       {reservations.length > 0 ? (
                         reservations.map(res => (
-                          <tr key={res.id} className="hover:bg-sky-50/50 transition-colors">
+                          <tr key={res._id} className="hover:bg-sky-50/50 transition-colors">
                             <td className="px-6 py-4">
                               <p className="font-bold text-sky-950">{res.name}</p>
                               <p className="text-xs text-sky-400">{res.phone}</p>
@@ -1209,7 +1212,7 @@ export default function App() {
                             <td className="px-6 py-4">
                               <select 
                                 value={res.status}
-                                onChange={(e) => handleUpdateReservationStatus(res.id, e.target.value)}
+                                onChange={(e) => handleUpdateReservationStatus(res._id, e.target.value)}
                                 className={`text-xs font-bold px-3 py-1 rounded-full border-none focus:ring-2 focus:ring-orange-500 transition-all ${
                                   res.status === 'confirmed' ? 'bg-green-100 text-green-700' :
                                   res.status === 'cancelled' ? 'bg-red-100 text-red-700' :
@@ -1223,7 +1226,7 @@ export default function App() {
                             </td>
                             <td className="px-6 py-4 text-right">
                               <button 
-                                onClick={() => handleDeleteReservation(res.id)}
+                                onClick={() => handleDeleteReservation(res._id)}
                                 className="p-2 text-sky-300 hover:text-red-600 transition-colors"
                               >
                                 <Trash2 className="w-5 h-5" />
@@ -1267,7 +1270,7 @@ export default function App() {
           {showLoginForm && (
             <LoginForm 
               onLogin={(u) => {
-                setCustomUser(u);
+                setUser(u);
                 setShowLoginForm(false);
               }}
               onCancel={() => setShowLoginForm(false)}
