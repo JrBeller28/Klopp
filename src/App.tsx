@@ -368,6 +368,21 @@ const LoginForm = ({ onLogin, onCancel }: {
   const [error, setError] = useState('');
   const [loading, setLoading] = useState(false);
 
+  const [apiStatus, setApiStatus] = useState<'checking' | 'ok' | 'error'>('checking');
+
+  useEffect(() => {
+    const checkHealth = async () => {
+      try {
+        const res = await fetch('/api/health');
+        if (res.ok) setApiStatus('ok');
+        else setApiStatus('error');
+      } catch {
+        setApiStatus('error');
+      }
+    };
+    checkHealth();
+  }, []);
+
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
     setLoading(true);
@@ -436,7 +451,12 @@ const LoginForm = ({ onLogin, onCancel }: {
                 placeholder="••••••••"
               />
             </div>
-            {error && <p className="text-red-500 text-xs font-bold">{error}</p>}
+            {apiStatus === 'error' && (
+              <p className="text-red-500 text-xs font-bold bg-red-50 p-2 rounded text-center">
+                Server tidak merespon. Pastikan backend berjalan.
+              </p>
+            )}
+            {error && <p className="text-red-500 text-xs font-bold bg-red-50 p-2 rounded text-center">{error}</p>}
             <div className="flex gap-3 mt-8">
               <button 
                 type="submit"

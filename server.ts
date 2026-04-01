@@ -213,28 +213,51 @@ app.delete("/api/reservations/:id", authenticate, async (req, res) => {
 
 // --- Server Start ---
 
-export const startServer = async () => {
-  // Start listening immediately so the frontend can at least connect to the server
+const initializeApp = async () => {
+  // Vite/Static serving logic
+  if (process.env.NODE_ENV !== "production") {
+    try {
+      const vite = await createViteServer({
+        server: { middlewareMode: true },
+        appType: "spa",
+      });
+      app.use(vite.middlewares);
+      console.log("Vite middleware initialized");
+    } catch (viteErr) {
+      console.error("Vite Middleware Error:", viteErr);
+    }
+  } else {
+    const distPath = path.join(process.cwd(), "dist");
+    app.use(express.static(distPath));
+    app.get("*", (req, res) => {
+      res.sendFile(path.join(distPath, "index.html"));
+    });
+    console.log("Static serving initialized");
+  }
+
+  // Start listening if not in Vercel
   if (process.env.NODE_ENV !== "production" || !process.env.VERCEL) {
     app.listen(PORT, "0.0.0.0", () => {
       console.log(`Server running on http://localhost:${PORT}`);
     });
   }
+};
 
+const connectToDatabase = async () => {
   try {
     if (!process.env.MONGODB_URI) {
-      console.warn("WARNING: MONGODB_URI is not set. Using local fallback.");
+      console.warn("WARNING: MONGODB_URI is not set.");
     } else if (process.env.MONGODB_URI.includes("<") || process.env.MONGODB_URI.includes(">")) {
       console.error("ERROR: MONGODB_URI contains '<' or '>'. Please remove these brackets from your connection string in Secrets.");
     }
     
     console.log("Attempting to connect to MongoDB...");
     await mongoose.connect(MONGODB_URI, {
-      serverSelectionTimeoutMS: 5000, // Fail after 5 seconds if not connected
+      serverSelectionTimeoutMS: 5000,
     });
     console.log("Connected to MongoDB successfully");
 
-    // Seed admin user if not exists
+    // Seed admin user
     const adminUsername = process.env.ADMIN_USERNAME || "admin";
     const adminPassword = process.env.ADMIN_PASSWORD || "adminklopp";
     const adminExists = await User.findOne({ username: adminUsername });
@@ -243,38 +266,13 @@ export const startServer = async () => {
       await User.create({ username: adminUsername, password: hashedPassword });
       console.log("Admin user created");
     }
-
-    if (process.env.NODE_ENV !== "production") {
-      const vite = await createViteServer({
-        server: { middlewareMode: true },
-        appType: "spa",
-      });
-      app.use(vite.middlewares);
-    } else {
-      const distPath = path.join(process.cwd(), "dist");
-      app.use(express.static(distPath));
-      app.get("*", (req, res) => {
-        res.sendFile(path.join(distPath, "index.html"));
-      });
-    }
   } catch (err) {
     console.error("MongoDB Connection Error:", err);
-    // Even if DB fails, we still want to serve the frontend (Vite)
-    if (process.env.NODE_ENV !== "production") {
-      try {
-        const vite = await createViteServer({
-          server: { middlewareMode: true },
-          appType: "spa",
-        });
-        app.use(vite.middlewares);
-      } catch (viteErr) {
-        console.error("Vite Middleware Error:", viteErr);
-      }
-    }
   }
 };
 
-// Call startServer
-startServer();
+// Initialize app and connect to DB
+initializeApp();
+connectToDatabase();
 
 export default app;
